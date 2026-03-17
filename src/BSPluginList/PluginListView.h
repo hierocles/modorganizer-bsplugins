@@ -2,6 +2,7 @@
 #define BSPLUGINLIST_PLUGINLISTVIEW_H
 
 #include <QSet>
+#include <QMetaObject>
 #include <QTreeView>
 
 namespace BSPluginList
@@ -69,6 +70,7 @@ private:
   MarkerInfos m_Markers;
   PluginListModel* m_PluginModel;
   PluginSortFilterProxyModel* m_SortProxy;
+  QMetaObject::Connection m_SelectionChangedConnection;
 };
 
 }  // namespace BSPluginList

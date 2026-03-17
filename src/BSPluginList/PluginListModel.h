@@ -4,6 +4,7 @@
 #include "TESData/PluginList.h"
 
 #include <QAbstractItemModel>
+#include <QHash>
 
 #include <functional>
 
@@ -102,9 +103,18 @@ public slots:
   //
   void toggleState(const QModelIndexList& indices);
 
+  // lock/unlock plugins in the load order
+  //
+  void lockPlugins(const QModelIndexList& indices, bool locked);
+
   // assign plugins to a group
   //
   void setGroup(const QModelIndexList& indices, const QString& group);
+  void renameGroup(const QString& oldGroup, const QString& newGroup);
+  void removeGroup(const QString& group);
+  void mergeGroup(const QString& fromGroup, const QString& toGroup);
+  void resetGroupsStructure();
+  void cleanEmptyGroups();
 
   // send plugins to the bottom of a group
   //
@@ -115,6 +125,7 @@ signals:
   void pluginOrderChanged() const;
 
 private:
+  void clearRoleCaches() const;
   [[nodiscard]] QVariant displayData(const QModelIndex& index) const;
   [[nodiscard]] QVariant checkstateData(const QModelIndex& index) const;
   [[nodiscard]] QVariant foregroundData(const QModelIndex& index) const;
@@ -126,6 +137,9 @@ private:
   [[nodiscard]] QVariant iconData(const QModelIndex& index) const;
 
   TESData::PluginList* m_Plugins;
+  mutable QHash<int, QVariant> m_ConflictCache;
+  mutable QHash<int, QVariant> m_FlagsCache;
+  mutable QHash<int, QString> m_TooltipCache;
 };
 
 }  // namespace BSPluginList

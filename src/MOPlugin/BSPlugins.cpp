@@ -45,6 +45,13 @@ QList<MOBase::PluginSetting> BSPlugins::settings() const
 {
   return {
       {u"enable_sort_button"_s, u"Enable the Sort button in the Plugins panel"_s, true},
+      {u"enable_plugin_grouping"_s,
+       u"Enable plugin grouping in the Plugins panel"_s, true},
+      {u"confirm_mass_operations"_s,
+       u"Ask confirmation before mass operations (disable all, remove group, reset groups)"_s,
+       true},
+      {u"auto_clean_group_separators_on_startup"_s,
+       u"Automatically remove empty group separators at startup"_s, false},
       {u"external_change_warning"_s,
        u"Warn if load order changes while running an executable"_s, true},
       {u"loot_show_dirty"_s,

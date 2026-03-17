@@ -52,6 +52,9 @@ public:
 
   [[nodiscard]] bool externalChangeWarning() const;
   [[nodiscard]] bool enableSortButton() const;
+  [[nodiscard]] bool enablePluginGrouping() const;
+  [[nodiscard]] bool confirmMassOperations() const;
+  [[nodiscard]] bool autoCleanGroupSeparatorsOnStartup() const;
   [[nodiscard]] bool lootShowDirty() const;
   [[nodiscard]] bool lootShowMessages() const;
   [[nodiscard]] bool lootShowProblems() const;

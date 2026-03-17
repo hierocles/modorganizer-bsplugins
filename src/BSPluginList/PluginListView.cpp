@@ -44,8 +44,6 @@ void PluginListView::setup()
 
   connect(this, &QTreeView::collapsed, this, &PluginListView::updateOverwriteMarkers);
   connect(this, &QTreeView::expanded, this, &PluginListView::updateOverwriteMarkers);
-  connect(selectionModel(), &QItemSelectionModel::selectionChanged, this,
-          &PluginListView::updateOverwriteMarkers);
 }
 
 void PluginListView::setModel(QAbstractItemModel* model)
@@ -55,7 +53,7 @@ void PluginListView::setModel(QAbstractItemModel* model)
     if (proxyModel) {
       if (const auto groupProxy = qobject_cast<PluginGroupProxyModel*>(proxyModel)) {
         connect(groupProxy, &PluginGroupProxyModel::groupRenameRequested, this,
-                &PluginListView::onGroupRenameRequested);
+                &PluginListView::onGroupRenameRequested, Qt::UniqueConnection);
       } else if (const auto sortProxy =
                      qobject_cast<PluginSortFilterProxyModel*>(proxyModel)) {
         m_SortProxy = sortProxy;
@@ -72,6 +70,13 @@ void PluginListView::setModel(QAbstractItemModel* model)
   }
 
   QTreeView::setModel(model);
+
+  if (m_SelectionChangedConnection) {
+    disconnect(m_SelectionChangedConnection);
+  }
+  m_SelectionChangedConnection =
+      connect(selectionModel(), &QItemSelectionModel::selectionChanged, this,
+              &PluginListView::updateOverwriteMarkers);
 }
 
 QRect PluginListView::visualRect(const QModelIndex& index) const
@@ -369,27 +374,7 @@ QModelIndexList PluginListView::indexViewToModel(const QModelIndexList& indices,
 void PluginListView::onGroupRenameRequested(const QModelIndex& index,
                                             const QString& name)
 {
-  if (!index.model()->hasChildren(index)) {
-    return;
-  }
-
-  QModelIndexList sourceRows;
-  for (int row = 0, count = index.model()->rowCount(index); row < count; ++row) {
-    const auto childIndex = index.model()->index(row, 0, index);
-    sourceRows.append(indexViewToModel(childIndex, m_PluginModel));
-  }
-
-  const auto persistentIndex = QPersistentModelIndex(index.model()->index(0, 0, index));
-  const bool expanded        = isExpanded(index);
-
-  m_PluginModel->setGroup(sourceRows, name);
-
-  const auto newIndex = persistentIndex.parent();
-  const auto newRight = newIndex.siblingAtColumn(index.model()->columnCount() - 1);
-  setExpanded(newIndex, expanded);
-  selectionModel()->select(QItemSelection(newIndex, newRight),
-                           QItemSelectionModel::ClearAndSelect);
-  selectionModel()->setCurrentIndex(newIndex, QItemSelectionModel::Current);
+  m_PluginModel->renameGroup(index.data().toString(), name);
 }
 
 }  // namespace BSPluginList

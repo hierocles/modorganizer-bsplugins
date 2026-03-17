@@ -102,6 +102,25 @@ bool Settings::enableSortButton() const
   return Organizer->pluginSetting(BSPlugins::NAME, "enable_sort_button").value<bool>();
 }
 
+bool Settings::enablePluginGrouping() const
+{
+  return Organizer->pluginSetting(BSPlugins::NAME, "enable_plugin_grouping")
+      .value<bool>();
+}
+
+bool Settings::confirmMassOperations() const
+{
+  return Organizer->pluginSetting(BSPlugins::NAME, "confirm_mass_operations")
+      .value<bool>();
+}
+
+bool Settings::autoCleanGroupSeparatorsOnStartup() const
+{
+  return Organizer
+      ->pluginSetting(BSPlugins::NAME, "auto_clean_group_separators_on_startup")
+      .value<bool>();
+}
+
 bool Settings::lootShowDirty() const
 {
   return Organizer->pluginSetting(BSPlugins::NAME, "loot_show_dirty").value<bool>();

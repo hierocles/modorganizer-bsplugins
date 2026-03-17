@@ -3,6 +3,7 @@
 #include "MOPlugin/Settings.h"
 #include "PluginListModel.h"
 #include "PluginListView.h"
+#include "TESData/FileInfo.h"
 
 #include <utility.h>
 
@@ -15,6 +16,18 @@
 
 namespace BSPluginList
 {
+
+static bool confirmIfEnabled(QWidget* parent, const QString& title,
+                             const QString& text)
+{
+  if (!Settings::instance()->confirmMassOperations()) {
+    return true;
+  }
+
+  return QMessageBox::question(parent, title, text,
+                               QMessageBox::Yes | QMessageBox::No) ==
+         QMessageBox::Yes;
+}
 
 PluginListContextMenu::PluginListContextMenu(const QModelIndex& index,
                                              PluginListModel* model,
@@ -86,16 +99,14 @@ void PluginListContextMenu::addAllItemsMenu()
   allItemsMenu->addSeparator();
 
   allItemsMenu->addAction(tr("Enable all"), [this]() {
-    if (QMessageBox::question(m_View->topLevelWidget(), tr("Confirm"),
-                              tr("Really enable all plugins?"),
-                              QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+    if (confirmIfEnabled(m_View->topLevelWidget(), tr("Confirm"),
+                         tr("Really enable all plugins?"))) {
       m_Model->setEnabledAll(true);
     }
   });
   allItemsMenu->addAction(tr("Disable all"), [this]() {
-    if (QMessageBox::question(m_View->topLevelWidget(), tr("Confirm"),
-                              tr("Really disable all plugins?"),
-                              QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+    if (confirmIfEnabled(m_View->topLevelWidget(), tr("Confirm"),
+                         tr("Really disable all plugins?"))) {
       m_Model->setEnabledAll(false);
     }
   });
@@ -103,17 +114,41 @@ void PluginListContextMenu::addAllItemsMenu()
 
 void PluginListContextMenu::addSelectedFilesActions()
 {
-  if (!m_FilesTogglable)
+  if (!m_FilesSelected)
     return;
 
   addSeparator();
 
-  addAction(tr("Enable selected"), [this]() {
-    m_Model->setEnabled(m_ModelSelected, true);
+  if (m_FilesTogglable) {
+    addAction(tr("Enable selected"), [this]() {
+      m_Model->setEnabled(m_ModelSelected, true);
+    });
+    addAction(tr("Disable selected"), [this]() {
+      m_Model->setEnabled(m_ModelSelected, false);
+    });
+  }
+
+  const bool allLocked = std::ranges::all_of(m_ModelSelected, [](auto&& idx) {
+    const auto plugin =
+        idx.data(PluginListModel::InfoRole).value<const TESData::FileInfo*>();
+    return plugin && plugin->lockedOrder();
   });
-  addAction(tr("Disable selected"), [this]() {
-    m_Model->setEnabled(m_ModelSelected, false);
+  const bool anyLocked = std::ranges::any_of(m_ModelSelected, [](auto&& idx) {
+    const auto plugin =
+        idx.data(PluginListModel::InfoRole).value<const TESData::FileInfo*>();
+    return plugin && plugin->lockedOrder();
   });
+
+  if (anyLocked) {
+    addAction(tr("Unlock load order position"), [this]() {
+      m_Model->lockPlugins(m_ModelSelected, false);
+    });
+  }
+  if (!allLocked) {
+    addAction(tr("Lock load order position"), [this]() {
+      m_Model->lockPlugins(m_ModelSelected, true);
+    });
+  }
 }
 
 void PluginListContextMenu::addSelectedGroupActions()
@@ -134,14 +169,16 @@ void PluginListContextMenu::addSelectedGroupActions()
 
 void PluginListContextMenu::addSelectionActions()
 {
-  if (m_ModelSelected.isEmpty())
+  if (m_ModelSelected.isEmpty() && !m_GroupsSelected)
     return;
 
   addSeparator();
 
-  addSendToMenu();
+  if (Settings::instance()->enablePluginGrouping()) {
+    addSendToMenu();
+  }
 
-  if (m_FilesSelected) {
+  if (m_FilesSelected && Settings::instance()->enablePluginGrouping()) {
     addAction(tr("Create Group..."), [this]() {
       bool ok;
       const QString group =
@@ -169,15 +206,12 @@ void PluginListContextMenu::addSelectionActions()
       }
     });
   } else if (m_GroupsSelected) {
+    const auto selectedGroup = m_ViewSelected.first().data().toString();
+
     if (m_ViewSelected.length() == 1) {
       addAction(tr("Rename Group..."), [this]() {
         const auto& selected = m_ViewSelected.first();
-        QModelIndexList indices;
-        for (int i = 0, count = selected.model()->rowCount(selected); i < count; ++i) {
-          const auto child = selected.model()->index(i, 0, selected);
-          auto&& index     = m_View->indexViewToModel(child, m_Model);
-          indices.append(std::move(index));
-        }
+        const auto oldGroup  = selected.data().toString();
 
         bool ok;
         const QString group = QInputDialog::getText(
@@ -187,39 +221,36 @@ void PluginListContextMenu::addSelectionActions()
         if (!ok || group.isEmpty())
           return;
 
-        const auto persistentIndex =
-            QPersistentModelIndex(selected.model()->index(0, 0, selected));
-        const bool expanded = m_View->isExpanded(selected);
+        m_Model->renameGroup(oldGroup, group);
+      });
 
-        m_Model->setGroup(indices, group);
+      addAction(tr("Merge Group Into..."), [this, selectedGroup]() {
+        GUI::ListDialog dialog{*Settings::instance(), m_View->topLevelWidget()};
+        dialog.setWindowTitle(tr("Merge Group Into..."));
 
-        const auto groupIndex = persistentIndex.parent();
-        const auto groupRight =
-            groupIndex.siblingAtColumn(selected.model()->columnCount() - 1);
-        m_View->setExpanded(groupIndex, expanded);
-        m_View->selectionModel()->select(QItemSelection(groupIndex, groupRight),
-                                         QItemSelectionModel::ClearAndSelect);
-        m_View->selectionModel()->setCurrentIndex(groupIndex,
-                                                  QItemSelectionModel::Current);
+        QStringList choices = m_Model->groups();
+        choices.removeAll(selectedGroup);
+        dialog.setChoices(choices);
+
+        if (dialog.exec() != QDialog::Accepted) {
+          return;
+        }
+
+        const QString targetGroup = dialog.getChoice();
+        if (targetGroup.isEmpty()) {
+          return;
+        }
+
+        m_Model->mergeGroup(selectedGroup, targetGroup);
       });
     }
 
     addAction(tr("Remove Group..."), [this]() {
-      QModelIndexList indices;
-      for (const auto& selected : m_ViewSelected) {
-        for (int i = 0, count = selected.model()->rowCount(selected); i < count; ++i) {
-          const auto child = selected.model()->index(i, 0, selected);
-          auto&& index     = m_View->indexViewToModel(child, m_Model);
-          indices.append(std::move(index));
-        }
-      }
-
-      if (QMessageBox::question(m_View->topLevelWidget(), tr("Confirm"),
-                                tr("Are you sure you want to remove \"%1\"?")
-                                    .arg(m_ViewSelected.first().data().toString()),
-                                QMessageBox::Yes | QMessageBox::No) ==
-          QMessageBox::Yes) {
-        m_Model->setGroup(indices, QString());
+      if (confirmIfEnabled(
+              m_View->topLevelWidget(), tr("Confirm"),
+              tr("Are you sure you want to remove \"%1\"?")
+                  .arg(m_ViewSelected.first().data().toString()))) {
+        m_Model->removeGroup(m_ViewSelected.first().data().toString());
       }
     });
   }

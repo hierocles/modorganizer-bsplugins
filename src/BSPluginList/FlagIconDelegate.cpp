@@ -49,6 +49,10 @@ QList<QString> FlagIconDelegate::getIcons(const QModelIndex& index) const
     icons.append(":/MO/gui/edit_clear");
   }
 
+  if (flags & FLAG_LOCKED) {
+    icons.append(":/MO/gui/locked");
+  }
+
   return icons;
 }
 

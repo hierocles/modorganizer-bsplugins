@@ -7,6 +7,7 @@
 #include "PluginSortFilterProxyModel.h"
 #include "TESData/PluginList.h"
 
+#include <QMetaObject>
 #include <QSortFilterProxyModel>
 #include <QWidget>
 
@@ -59,10 +60,13 @@ private slots:
   void on_pluginList_openOriginExplorer(const QModelIndex& index);
   void on_espFilterEdit_textChanged(const QString& filter);
   void on_sortButton_clicked();
+  void on_resetGroupsButton_clicked();
+  void on_cleanGroupsButton_clicked();
   void on_restoreButton_clicked();
   void on_saveButton_clicked();
 
 private:
+  void applyGroupingSetting();
   [[nodiscard]] QMenu* listOptionsMenu();
   void saveState();
   void restoreState();
@@ -74,6 +78,7 @@ private:
                         const QVariant& newValue);
   void checkLoadOrderChanged(const QString& binaryName);
   void importLootGroups();
+  [[nodiscard]] bool confirmMassOperation(const QString& text) const;
 
   // HACK: Attempt to keep our custom plugin list synchronized with the built-in panel
   void synchronizePluginLists(MOBase::IOrganizer* organizer);
@@ -96,6 +101,7 @@ private:
   bool m_OrganizerRefreshing   = false;
   bool m_IsRunningApp          = false;
   bool m_ExternalStatesChanged = false;
+  QMetaObject::Connection m_ViewSelectionChangedConnection;
 };
 
 }  // namespace BSPluginList

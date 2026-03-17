@@ -3,6 +3,7 @@
 #include "TESFile/Reader.h"
 
 #include <bsatk.h>
+#include <game_features/igamefeatures.h>
 #include <gameplugins.h>
 #include <iplugingame.h>
 #include <log.h>
@@ -227,12 +228,17 @@ void PluginList::refresh(bool invalidate)
     readGroups(groupsFile);
   }
 
+  if (const auto lockedFile = lockedOrderPath(); !lockedFile.isEmpty()) {
+    readLockedOrder(lockedFile);
+  }
+
   computeCompileIndices();
   refreshLoadOrder();
   dispatchPluginStateChanges();
   testMasters();
 
-  if (const auto lockedOrderFile = lockedOrderPath(); !lockedOrderFile.isEmpty()) {
+  if (const auto lockedOrderFile = lockedOrderPath();
+      !lockedOrderFile.isEmpty() && !QFileInfo::exists(lockedOrderFile)) {
     writeEmptyTextFile(lockedOrderFile);
   }
 
@@ -546,6 +552,8 @@ void PluginList::shiftPriority(const std::vector<int>& ids, int offset)
 
 void PluginList::setGroup(const std::vector<int>& ids, const QString& group)
 {
+  rememberGroup(group);
+
   for (const int id : ids) {
     m_Plugins.at(id)->setGroup(group);
   }
@@ -553,6 +561,138 @@ void PluginList::setGroup(const std::vector<int>& ids, const QString& group)
   if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
     writeGroups(groupsFile);
   }
+}
+
+void PluginList::renameGroup(const QString& oldGroup, const QString& newGroup)
+{
+  if (oldGroup.isEmpty() || newGroup.isEmpty() || oldGroup == newGroup) {
+    return;
+  }
+
+  bool changed = false;
+  for (const auto& plugin : m_Plugins) {
+    if (plugin->group() == oldGroup) {
+      plugin->setGroup(newGroup);
+      changed = true;
+    }
+  }
+
+  const int oldIndex = m_KnownGroups.indexOf(oldGroup);
+  if (oldIndex != -1) {
+    if (!m_KnownGroups.contains(newGroup)) {
+      m_KnownGroups[oldIndex] = newGroup;
+    } else {
+      m_KnownGroups.removeAt(oldIndex);
+    }
+    changed = true;
+  } else {
+    rememberGroup(newGroup);
+    changed = true;
+  }
+
+  if (changed) {
+    if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
+      writeGroups(groupsFile);
+    }
+  }
+}
+
+void PluginList::removeGroup(const QString& group)
+{
+  if (group.isEmpty()) {
+    return;
+  }
+
+  bool changed = false;
+  for (const auto& plugin : m_Plugins) {
+    if (plugin->group() == group) {
+      plugin->setGroup(QString());
+      changed = true;
+    }
+  }
+
+  changed = m_KnownGroups.removeAll(group) > 0 || changed;
+
+  if (changed) {
+    if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
+      writeGroups(groupsFile);
+    }
+  }
+}
+
+void PluginList::mergeGroup(const QString& fromGroup, const QString& toGroup)
+{
+  if (fromGroup.isEmpty() || toGroup.isEmpty() || fromGroup == toGroup) {
+    return;
+  }
+
+  bool changed = false;
+  for (const auto& plugin : m_Plugins) {
+    if (plugin->group() == fromGroup) {
+      plugin->setGroup(toGroup);
+      changed = true;
+    }
+  }
+
+  rememberGroup(toGroup);
+  changed = m_KnownGroups.removeAll(fromGroup) > 0 || changed;
+
+  if (changed) {
+    if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
+      writeGroups(groupsFile);
+    }
+  }
+}
+
+void PluginList::resetGroupsStructure()
+{
+  bool changed = false;
+  for (const auto& plugin : m_Plugins) {
+    if (!plugin->group().isEmpty()) {
+      plugin->setGroup(QString());
+      changed = true;
+    }
+  }
+
+  if (!m_KnownGroups.isEmpty()) {
+    m_KnownGroups.clear();
+    changed = true;
+  }
+
+  if (changed) {
+    if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
+      writeGroups(groupsFile);
+    }
+  }
+}
+
+void PluginList::cleanEmptyGroups()
+{
+  boost::container::flat_set<QString> usedGroups;
+  for (const auto& plugin : m_Plugins) {
+    if (!plugin->group().isEmpty()) {
+      usedGroups.insert(plugin->group());
+    }
+  }
+
+  const int before = m_KnownGroups.size();
+  m_KnownGroups.erase(
+      std::remove_if(m_KnownGroups.begin(), m_KnownGroups.end(),
+                     [&usedGroups](const QString& group) {
+                       return group.isEmpty() || !usedGroups.contains(group);
+                     }),
+      m_KnownGroups.end());
+
+  if (m_KnownGroups.size() != before) {
+    if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
+      writeGroups(groupsFile);
+    }
+  }
+}
+
+QStringList PluginList::knownGroups() const
+{
+  return m_KnownGroups;
 }
 
 QStringList PluginList::loadOrder() const
@@ -753,10 +893,22 @@ bool PluginList::isMasterFlagged(const QString& name) const
   return plugin ? plugin->isMasterFlagged() : false;
 }
 
+bool PluginList::isMediumFlagged(const QString& name) const
+{
+  Q_UNUSED(name);
+  return false;
+}
+
 bool PluginList::isLightFlagged(const QString& name) const
 {
   const auto plugin = findPlugin(name);
   return plugin ? plugin->isLightFlagged() : false;
+}
+
+bool PluginList::isBlueprintFlagged(const QString& name) const
+{
+  Q_UNUSED(name);
+  return false;
 }
 
 bool PluginList::isOverlayFlagged(const QString& name) const
@@ -769,6 +921,30 @@ bool PluginList::hasNoRecords(const QString& name) const
 {
   const auto plugin = findPlugin(name);
   return plugin ? plugin->hasNoRecords() : false;
+}
+
+int PluginList::formVersion(const QString& name) const
+{
+  Q_UNUSED(name);
+  return -1;
+}
+
+float PluginList::headerVersion(const QString& name) const
+{
+  Q_UNUSED(name);
+  return -1.0F;
+}
+
+QString PluginList::author(const QString& name) const
+{
+  const auto plugin = findPlugin(name);
+  return plugin ? plugin->author() : QString();
+}
+
+QString PluginList::description(const QString& name) const
+{
+  const auto plugin = findPlugin(name);
+  return plugin ? plugin->description() : QString();
 }
 
 #pragma endregion IPluginList
@@ -800,14 +976,18 @@ const MOTools::Loot::Plugin* PluginList::getLootReport(const QString& name) cons
 
 void PluginList::writePluginLists() const
 {
-  const auto managedGame = m_Organizer->managedGame();
-  const auto tesSupport  = managedGame ? managedGame->feature<GamePlugins>() : nullptr;
+  const auto gameFeatures = m_Organizer->gameFeatures();
+  const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
   if (tesSupport) {
     tesSupport->writePluginLists(this);
   }
 
   if (const auto groupsFile = groupsPath(); !groupsFile.isEmpty()) {
     writeGroups(groupsFile);
+  }
+
+  if (const auto lockedFile = lockedOrderPath(); !lockedFile.isEmpty()) {
+    writeLockedOrder(lockedFile);
   }
 }
 
@@ -942,12 +1122,12 @@ void PluginList::scanDataFiles(bool invalidate)
                                       ? managedGame->loadOrderMechanism()
                                       : MOBase::IPluginGame::LoadOrderMechanism::None;
 
-  const auto tesSupport = managedGame ? managedGame->feature<GamePlugins>() : nullptr;
+    const auto gameFeatures = m_Organizer->gameFeatures();
+    const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
 
   const bool lightPluginsAreSupported =
       tesSupport && tesSupport->lightPluginsAreSupported();
-  const bool overridePluginsAreSupported =
-      tesSupport && tesSupport->overridePluginsAreSupported();
+  const bool overridePluginsAreSupported = false;
 
   QStringList availablePlugins;
 
@@ -1046,8 +1226,8 @@ void PluginList::scanDataFiles(bool invalidate)
 
 void PluginList::readPluginLists()
 {
-  const auto managedGame = m_Organizer->managedGame();
-  const auto tesSupport  = managedGame ? managedGame->feature<GamePlugins>() : nullptr;
+  const auto gameFeatures = m_Organizer->gameFeatures();
+  const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
 
   if (tesSupport) {
     tesSupport->readPluginLists(this);
@@ -1121,9 +1301,17 @@ void PluginList::clearGroups()
   }
 }
 
+void PluginList::rememberGroup(const QString& group)
+{
+  if (!group.isEmpty() && !m_KnownGroups.contains(group)) {
+    m_KnownGroups.append(group);
+  }
+}
+
 void PluginList::readGroups(const QString& fileName)
 {
   clearGroups();
+  m_KnownGroups.clear();
 
   QFile file{fileName};
   if (!file.exists()) {
@@ -1151,9 +1339,15 @@ void PluginList::readGroups(const QString& fileName)
       continue;
     }
 
+    if (fields[0].isEmpty()) {
+      rememberGroup(fields[1]);
+      continue;
+    }
+
     if (const auto it = m_PluginsByName.find(fields[0]); it != m_PluginsByName.end()) {
       const auto& plugin = m_Plugins.at(it->second);
       plugin->setGroup(fields[1]);
+      rememberGroup(fields[1]);
     }
   }
 
@@ -1175,6 +1369,12 @@ void PluginList::writeGroups(const QString& fileName) const
 
   file->resize(0);
   file->write("# This file was automatically generated by Mod Organizer.\r\n"_ba);
+  for (const auto& group : m_KnownGroups) {
+    if (!group.isEmpty()) {
+      file->write(u"|%1\r\n"_s.arg(group).toUtf8());
+    }
+  }
+
   for (const auto& [name, i] : m_PluginsByName) {
     const auto& plugin = m_Plugins.at(i);
     const auto& group  = plugin->group();
@@ -1184,6 +1384,68 @@ void PluginList::writeGroups(const QString& fileName) const
   }
 
   file.commit();
+}
+
+void PluginList::clearLockedOrder()
+{
+  for (const auto& plugin : m_Plugins) {
+    plugin->setLockedOrder(false);
+  }
+}
+
+void PluginList::readLockedOrder(const QString& fileName)
+{
+  clearLockedOrder();
+
+  QFile file{fileName};
+  if (!file.exists() || !file.open(QFile::ReadOnly)) {
+    return;
+  }
+
+  QTextStream stream{&file};
+  QString line;
+  while (stream.readLineInto(&line)) {
+    if (line.isEmpty() || line.at(0) == u'#') {
+      continue;
+    }
+
+    if (const auto it = m_PluginsByName.find(line); it != m_PluginsByName.end()) {
+      m_Plugins.at(it->second)->setLockedOrder(true);
+    }
+  }
+
+  file.close();
+}
+
+void PluginList::writeLockedOrder(const QString& fileName) const
+{
+  MOBase::SafeWriteFile file{fileName};
+
+  file->resize(0);
+  file->write("# This file was automatically generated by Mod Organizer.\r\n"_ba);
+
+  for (int priority = 0; priority < static_cast<int>(m_PluginsByPriority.size());
+       ++priority) {
+    const auto& plugin = m_Plugins.at(m_PluginsByPriority[priority]);
+    if (plugin->lockedOrder()) {
+      file->write((plugin->name() + u"\r\n"_s).toUtf8());
+    }
+  }
+
+  file.commit();
+}
+
+void PluginList::lockPlugin(int id, bool locked)
+{
+  if (id < 0 || id >= static_cast<int>(m_Plugins.size())) {
+    return;
+  }
+
+  m_Plugins.at(id)->setLockedOrder(locked);
+
+  if (const auto lockedFile = lockedOrderPath(); !lockedFile.isEmpty()) {
+    writeLockedOrder(lockedFile);
+  }
 }
 
 void PluginList::queuePluginStateChange(const QString& pluginName, PluginStates state)
@@ -1297,13 +1559,11 @@ void PluginList::computeCompileIndices()
   int numESLs    = 0;
   int numSkipped = 0;
 
-  const auto managedGame = m_Organizer->managedGame();
-  const auto tesSupport  = managedGame ? managedGame->feature<GamePlugins>() : nullptr;
+    const auto gameFeatures = m_Organizer->gameFeatures();
+    const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
 
   const bool lightPluginsAreSupported =
       tesSupport && tesSupport->lightPluginsAreSupported();
-  const bool overridePluginsAreSupported =
-      tesSupport && tesSupport->overridePluginsAreSupported();
 
   for (int priority = 0; priority < m_PluginsByPriority.size(); ++priority) {
     const int index   = m_PluginsByPriority[priority];
@@ -1322,7 +1582,7 @@ void PluginList::computeCompileIndices()
                            .arg(numESLs & 0xFFF, 3, 16, QChar(u'0'))
                            .toUpper());
       ++numESLs;
-    } else if (overridePluginsAreSupported && plugin->isOverlayFlagged()) {
+    } else if (plugin->isOverlayFlagged()) {
       plugin->setIndex((u"XX"_s));
       ++numSkipped;
     } else {

@@ -32,15 +32,16 @@ public:
 
   enum EFlag : uint
   {
-    FLAG_NONE        = 0x00,
-    FLAG_PROBLEMATIC = 0x01,
-    FLAG_INFORMATION = 0x02,
-    FLAG_INI         = 0x04,
-    FLAG_BSA         = 0x08,
-    FLAG_MASTER      = 0x10,
-    FLAG_LIGHT       = 0x20,
-    FLAG_OVERLAY     = 0x40,
-    FLAG_CLEAN       = 0x80,
+    FLAG_NONE        = 0x000,
+    FLAG_PROBLEMATIC = 0x001,
+    FLAG_INFORMATION = 0x002,
+    FLAG_INI         = 0x004,
+    FLAG_BSA         = 0x008,
+    FLAG_MASTER      = 0x010,
+    FLAG_LIGHT       = 0x020,
+    FLAG_OVERLAY     = 0x040,
+    FLAG_CLEAN       = 0x080,
+    FLAG_LOCKED      = 0x100,
   };
 
   struct FileSystemData
@@ -79,6 +80,7 @@ public:
     QString index;
     int loadOrder;
     QString group;
+    bool lockedOrder = false;
 
     bool operator<(const State& other) const { return (loadOrder < other.loadOrder); }
   };
@@ -160,6 +162,8 @@ public:
   void setLoadOrder(int loadOrder) { m_State.loadOrder = loadOrder; }
   [[nodiscard]] const QString& group() const { return m_State.group; }
   void setGroup(const QString& group) { m_State.group = group; }
+  [[nodiscard]] bool lockedOrder() const { return m_State.lockedOrder; }
+  void setLockedOrder(bool locked) { m_State.lockedOrder = locked; }
 
   [[nodiscard]] EConflictFlag conflictState() const
   {

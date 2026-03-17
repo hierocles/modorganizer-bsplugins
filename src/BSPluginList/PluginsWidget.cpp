@@ -10,6 +10,8 @@
 #include "PluginSortFilterProxyModel.h"
 #include "ui_pluginswidget.h"
 
+#include <game_features/igamefeatures.h>
+
 #include <boost/range/adaptor/reversed.hpp>
 
 #include <QApplication>
@@ -36,14 +38,19 @@ PluginsWidget::PluginsWidget(MOBase::IOrganizer* organizer,
   m_SortProxy->setSourceModel(m_PluginListModel);
   m_GroupProxy = new PluginGroupProxyModel(organizer);
   m_GroupProxy->setSourceModel(m_SortProxy);
-  ui->pluginList->setModel(m_GroupProxy);
+  ui->pluginList->setModel(m_SortProxy);
   ui->pluginList->setup();
   ui->pluginList->sortByColumn(PluginListModel::COL_PRIORITY, Qt::AscendingOrder);
-  ui->pluginList->expandAll();
   optionsMenu = listOptionsMenu();
   ui->listOptionsBtn->setMenu(optionsMenu);
 
   ui->sortButton->setVisible(Settings::instance()->enableSortButton());
+  ui->resetGroupsButton->setVisible(Settings::instance()->enablePluginGrouping());
+  ui->cleanGroupsButton->setVisible(Settings::instance()->enablePluginGrouping());
+
+  if (Settings::instance()->autoCleanGroupSeparatorsOnStartup()) {
+    m_PluginListModel->cleanEmptyGroups();
+  }
 
   // monitor main window for close event
   topLevelWidget()->installEventFilter(this);
@@ -65,13 +72,14 @@ PluginsWidget::PluginsWidget(MOBase::IOrganizer* organizer,
 
   connect(m_GroupProxy, &QAbstractItemModel::modelReset, [this]() {
     ui->pluginList->scrollToTop();
+    if (Settings::instance()->enablePluginGrouping()) {
+      Settings::instance()->restoreTreeExpandState(ui->pluginList);
+    }
   });
 
   connect(ui->pluginList, &QTreeView::collapsed, this,
           &PluginsWidget::onGroupCollapsed);
   connect(ui->pluginList, &QTreeView::expanded, this, &PluginsWidget::onGroupExpanded);
-  connect(ui->pluginList->selectionModel(), &QItemSelectionModel::selectionChanged,
-          this, &PluginsWidget::onSelectionChanged);
 
   panelInterface->onPanelActivated(
       std::bind_front(&PluginsWidget::onPanelActivated, this));
@@ -114,13 +122,12 @@ void PluginsWidget::updatePluginCount()
   int regularCount           = 0;
   int activeVisibleCount     = 0;
 
-  const auto managedGame = m_Organizer->managedGame();
-  const auto tesSupport  = managedGame ? managedGame->feature<GamePlugins>() : nullptr;
+    const auto gameFeatures = m_Organizer->gameFeatures();
+    const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
 
   const bool lightPluginsAreSupported =
       tesSupport && tesSupport->lightPluginsAreSupported();
-  const bool overridePluginsAreSupported =
-      tesSupport && tesSupport->overridePluginsAreSupported();
+    const bool overridePluginsAreSupported = false;
 
   for (int i = 0, count = m_PluginListModel->rowCount(); i < count; ++i) {
     const auto index = m_PluginListModel->index(i, 0);
@@ -220,6 +227,10 @@ void PluginsWidget::changeEvent(QEvent* event)
 
 void PluginsWidget::onGroupCollapsed(const QModelIndex& index)
 {
+  if (Settings::instance()->enablePluginGrouping()) {
+    Settings::instance()->saveTreeExpandState(ui->pluginList);
+  }
+
   if (ui->pluginList->selectionModel()->isSelected(index)) {
     onSelectionChanged();
   }
@@ -227,6 +238,10 @@ void PluginsWidget::onGroupCollapsed(const QModelIndex& index)
 
 void PluginsWidget::onGroupExpanded(const QModelIndex& index)
 {
+  if (Settings::instance()->enablePluginGrouping()) {
+    Settings::instance()->saveTreeExpandState(ui->pluginList);
+  }
+
   if (ui->pluginList->selectionModel()->isSelected(index)) {
     onSelectionChanged();
   }
@@ -430,6 +445,21 @@ void PluginsWidget::on_sortButton_clicked()
   }
 }
 
+void PluginsWidget::on_resetGroupsButton_clicked()
+{
+  if (!confirmMassOperation(
+          tr("Reset all groups and separators? Plugin load order will stay unchanged."))) {
+    return;
+  }
+
+  m_PluginListModel->resetGroupsStructure();
+}
+
+void PluginsWidget::on_cleanGroupsButton_clicked()
+{
+  m_PluginListModel->cleanEmptyGroups();
+}
+
 static bool tryRestore(const QString& filePath, const QString& identifier,
                        bool required, QWidget* parent = nullptr)
 {
@@ -535,18 +565,25 @@ QMenu* PluginsWidget::listOptionsMenu()
   menu->addSeparator();
 
   menu->addAction(tr("Enable all"), [this]() {
-    if (QMessageBox::question(topLevelWidget(), tr("Confirm"),
-                              tr("Really enable all plugins?"),
-                              QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+    if (confirmMassOperation(tr("Really enable all plugins?"))) {
       m_PluginListModel->setEnabledAll(true);
     }
   });
   menu->addAction(tr("Disable all"), [this]() {
-    if (QMessageBox::question(topLevelWidget(), tr("Confirm"),
-                              tr("Really disable all plugins?"),
-                              QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+    if (confirmMassOperation(tr("Really disable all plugins?"))) {
       m_PluginListModel->setEnabledAll(false);
     }
+  });
+
+  menu->addSeparator();
+  menu->addAction(tr("Reset Group Structure"), [this]() {
+    if (confirmMassOperation(tr(
+            "Reset all groups and separators? Plugin load order will stay unchanged."))) {
+      m_PluginListModel->resetGroupsStructure();
+    }
+  });
+  menu->addAction(tr("Clean Groups"), [this]() {
+    m_PluginListModel->cleanEmptyGroups();
   });
 
   return menu;
@@ -556,14 +593,20 @@ void PluginsWidget::saveState()
 {
   auto* const settings = Settings::instance();
   settings->saveState(ui->pluginList->header());
-  settings->saveTreeExpandState(ui->pluginList);
+  if (settings->enablePluginGrouping()) {
+    settings->saveTreeExpandState(ui->pluginList);
+  }
 }
 
 void PluginsWidget::restoreState()
 {
   const auto* const settings = Settings::instance();
   settings->restoreState(ui->pluginList->header());
-  settings->restoreTreeExpandState(ui->pluginList);
+  applyGroupingSetting();
+
+  if (settings->enablePluginGrouping()) {
+    settings->restoreTreeExpandState(ui->pluginList);
+  }
 
   const bool doHide = settings->get<bool>("hide_force_enabled", false);
   toggleForceEnabled->setChecked(doHide);
@@ -616,6 +659,8 @@ bool PluginsWidget::onAboutToRun([[maybe_unused]] const QString& binary)
   const auto pluginsName = QDir::cleanPath(profilePath.absoluteFilePath("plugins.txt"));
   const auto loadOrderName =
       QDir::cleanPath(profilePath.absoluteFilePath("loadorder.txt"));
+    const auto lockedOrderName =
+      QDir::cleanPath(profilePath.absoluteFilePath("lockedorder.txt"));
   const auto parent = this->topLevelWidget();
 
   if (QFileInfo::exists(pluginsName + ".snapshot")) {
@@ -626,9 +671,14 @@ bool PluginsWidget::onAboutToRun([[maybe_unused]] const QString& binary)
     MOBase::shellDeleteQuiet(loadOrderName + ".snapshot", parent);
   }
 
+  if (QFileInfo::exists(lockedOrderName + ".snapshot")) {
+    MOBase::shellDeleteQuiet(lockedOrderName + ".snapshot", parent);
+  }
+
   if (QFileInfo(binary).fileName().compare("lootcli.exe") != 0) {
     createBackup(pluginsName, "snapshot", parent);
     createBackup(loadOrderName, "snapshot", parent);
+    createBackup(lockedOrderName, "snapshot", parent);
     m_IsRunningApp = true;
   }
 
@@ -659,6 +709,44 @@ void PluginsWidget::onSettingChanged(const QString& key,
 {
   if (key == u"enable_sort_button"_s) {
     ui->sortButton->setVisible(newValue.value<bool>());
+  } else if (key == u"enable_plugin_grouping"_s) {
+    applyGroupingSetting();
+    ui->resetGroupsButton->setVisible(newValue.value<bool>());
+    ui->cleanGroupsButton->setVisible(newValue.value<bool>());
+  }
+}
+
+bool PluginsWidget::confirmMassOperation(const QString& text) const
+{
+  if (!Settings::instance()->confirmMassOperations()) {
+    return true;
+  }
+
+  return QMessageBox::question(topLevelWidget(), tr("Confirm"), text,
+                               QMessageBox::Yes | QMessageBox::No) ==
+         QMessageBox::Yes;
+}
+
+void PluginsWidget::applyGroupingSetting()
+{
+  auto* const model = Settings::instance()->enablePluginGrouping()
+                          ? static_cast<QAbstractItemModel*>(m_GroupProxy)
+                          : static_cast<QAbstractItemModel*>(m_SortProxy);
+
+  if (ui->pluginList->model() != model) {
+    ui->pluginList->setModel(model);
+    ui->pluginList->sortByColumn(PluginListModel::COL_PRIORITY, Qt::AscendingOrder);
+  }
+
+  if (m_ViewSelectionChangedConnection) {
+    disconnect(m_ViewSelectionChangedConnection);
+  }
+  m_ViewSelectionChangedConnection =
+      connect(ui->pluginList->selectionModel(), &QItemSelectionModel::selectionChanged,
+              this, &PluginsWidget::onSelectionChanged);
+
+  if (!Settings::instance()->enablePluginGrouping()) {
+    ui->pluginList->collapseAll();
   }
 }
 
@@ -681,10 +769,13 @@ void PluginsWidget::checkLoadOrderChanged(const QString& binaryName)
   const auto pluginsName = QDir::cleanPath(profilePath.absoluteFilePath("plugins.txt"));
   const auto loadOrderName =
       QDir::cleanPath(profilePath.absoluteFilePath("loadorder.txt"));
+    const auto lockedOrderName =
+      QDir::cleanPath(profilePath.absoluteFilePath("lockedorder.txt"));
   const auto parent = this->topLevelWidget();
 
   const auto pluginsSnapshot   = pluginsName + ".snapshot";
   const auto loadOrderSnapshot = loadOrderName + ".snapshot";
+    const auto lockedOrderSnapshot = lockedOrderName + ".snapshot";
 
   const auto pluginsFile   = QFileInfo(pluginsName);
   const auto loadOrderFile = QFileInfo(loadOrderName);
@@ -692,23 +783,31 @@ void PluginsWidget::checkLoadOrderChanged(const QString& binaryName)
   if (!QFileInfo(loadOrderSnapshot).exists())
     return;
 
-  const bool enableWarning = Settings::instance()->externalChangeWarning();
-
   // we just refreshed and rewrote loadorder.txt if plugins.txt changed
-  if (enableWarning && (m_ExternalStatesChanged ||
-                        hashFile(loadOrderName) != hashFile(loadOrderSnapshot))) {
+  const bool enableWarning    = Settings::instance()->externalChangeWarning();
+  const bool loadOrderChanged = m_ExternalStatesChanged ||
+                                hashFile(loadOrderName) != hashFile(loadOrderSnapshot);
 
+  if (loadOrderChanged) {
     if (binaryName.compare("Loot.exe", Qt::CaseInsensitive) == 0) {
       importLootGroups();
     } else {
-      const auto response = QMessageBox::warning(
-          parent, tr("Load order changed"),
-          tr("Load order was changed while running %1. Keep changes?").arg(binaryName),
-          QMessageBox::Yes | QMessageBox::No);
+      // When warning is enabled, ask the user whether to keep game changes.
+      // When warning is disabled, always silently restore the snapshot.
+      bool shouldRestore = true;
+      if (enableWarning) {
+        const auto answer = QMessageBox::question(
+            this, tr("Load Order Changed"),
+            tr("%1 has modified the load order. Do you want to apply these changes?")
+                .arg(binaryName),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        shouldRestore = (answer == QMessageBox::No);
+      }
 
-      if (response == QMessageBox::No) {
+      if (shouldRestore) {
         if (!tryRestore(pluginsName, "snapshot", true, parent) ||
-            !tryRestore(loadOrderName, "snapshot", true, parent)) {
+            !tryRestore(loadOrderName, "snapshot", true, parent) ||
+            !tryRestore(lockedOrderName, "snapshot", false, parent)) {
           const auto e = ::GetLastError();
 
           QMessageBox::critical(
@@ -724,6 +823,7 @@ void PluginsWidget::checkLoadOrderChanged(const QString& binaryName)
 
   MOBase::shellDeleteQuiet(pluginsSnapshot, parent);
   MOBase::shellDeleteQuiet(loadOrderSnapshot, parent);
+  MOBase::shellDeleteQuiet(lockedOrderSnapshot, parent);
   m_PluginListModel->invalidate();
 }
 

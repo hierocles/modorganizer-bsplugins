@@ -42,7 +42,11 @@ void PluginGroupProxyModel::setSourceModel(QAbstractItemModel* sourceModel)
 
 bool PluginGroupProxyModel::hasChildren(const QModelIndex& parent) const
 {
-  return rowCount(parent) > 0;
+  if (!parent.isValid()) {
+    return rowCount(parent) > 0;
+  }
+
+  return m_ProxyItems.at(parent.internalId()).isGroup();
 }
 
 int PluginGroupProxyModel::rowCount(const QModelIndex& parent) const
@@ -267,15 +271,21 @@ QMimeData* PluginGroupProxyModel::mimeData(const QModelIndexList& indexes) const
   m_DraggingGroups.clear();
 
   QModelIndexList sourceIndexes;
+  boost::container::flat_set<int> seenSourceRows;
 
   for (const auto& idx : indexes) {
     const auto sourceIndex = mapToSource(idx);
     if (sourceIndex.isValid()) {
-      sourceIndexes.append(sourceIndex);
+      if (seenSourceRows.insert(sourceIndex.row()).second) {
+        sourceIndexes.append(sourceIndex);
+      }
     } else {
       m_DraggingGroups.push_back(idx.internalId());
       for (int i = 0, count = rowCount(idx); i < count; ++i) {
-        sourceIndexes.append(mapToSource(index(i, 0, idx)));
+        const auto childSource = mapToSource(index(i, 0, idx));
+        if (childSource.isValid() && seenSourceRows.insert(childSource.row()).second) {
+          sourceIndexes.append(childSource);
+        }
       }
     }
   }
@@ -301,11 +311,11 @@ bool PluginGroupProxyModel::canDropMimeData(const QMimeData* data,
   const int sourceRow = idx.isValid() ? mapLowerBoundToSourceRow(idx.internalId()) : -1;
 
   bool canDrop = true;
-  if (isBelowDivider(idx.internalId())) {
+  if (idx.isValid() && isBelowDivider(idx.internalId())) {
     canDrop = canDrop && sourceModel()->canDropMimeData(data, action, sourceRow + 1, 0,
                                                         QModelIndex());
   }
-  if (isAboveDivider(idx.internalId())) {
+  if (idx.isValid() && isAboveDivider(idx.internalId())) {
     canDrop = canDrop && sourceModel()->canDropMimeData(data, action, sourceRow - 1, 0,
                                                         QModelIndex());
   }
@@ -485,6 +495,39 @@ void PluginGroupProxyModel::buildGroups()
   }
 
   boost::container::flat_map<QString, int> groupRepeats;
+  const auto baseModel = findBaseModel<PluginListModel>(sourceModel());
+  const QStringList knownGroups = baseModel ? baseModel->m_Plugins->knownGroups()
+                                            : QStringList();
+  boost::container::flat_set<QString> nonEmptyGroups;
+  for (int i = 0, count = sourceModel()->rowCount(); i < count; ++i) {
+    const auto idx = sourceModel()->index(i, 0);
+    const auto group = idx.data(PluginListModel::GroupingRole).toString();
+    if (!group.isEmpty()) {
+      nonEmptyGroups.insert(group);
+    }
+  }
+
+  auto appendTopLevelGroup = [&](const QString& group) {
+    const int row = static_cast<int>(m_TopLevel.size());
+    const auto id = createItem(group, row, -1, NO_ID, std::make_shared<Group>(group),
+                               groupRepeats[group]++);
+    m_TopLevel.push_back(id);
+    return id;
+  };
+
+  int nextKnownGroup = 0;
+  auto appendPendingEmptyGroups = [&](const QString& untilGroup) {
+    while (nextKnownGroup < knownGroups.size()) {
+      const auto& knownGroup = knownGroups.at(nextKnownGroup++);
+      if (knownGroup == untilGroup) {
+        break;
+      }
+
+      if (!nonEmptyGroups.contains(knownGroup)) {
+        appendTopLevelGroup(knownGroup);
+      }
+    }
+  };
 
   QString lastGroup;
   std::size_t groupId = NO_ID;
@@ -496,13 +539,11 @@ void PluginGroupProxyModel::buildGroups()
     if (sorted && group != lastGroup) {
       lastGroup = group;
 
-      if (group.isNull()) {
+      if (group.isEmpty()) {
         groupId = NO_ID;
       } else {
-        const int row = static_cast<int>(m_TopLevel.size());
-        groupId = createItem(group, row, -1, NO_ID, std::make_shared<Group>(group),
-                             groupRepeats[group]++);
-        m_TopLevel.push_back(groupId);
+        appendPendingEmptyGroups(group);
+        groupId = appendTopLevelGroup(group);
       }
     }
 
@@ -525,6 +566,14 @@ void PluginGroupProxyModel::buildGroups()
       const int row     = static_cast<int>(m_TopLevel.size());
       const auto id     = createItem(key, row, -1, NO_ID, nullptr, groupRepeats[key]++);
       m_TopLevel.push_back(id);
+    }
+  }
+
+  appendPendingEmptyGroups(QString());
+  while (nextKnownGroup < knownGroups.size()) {
+    const auto& knownGroup = knownGroups.at(nextKnownGroup++);
+    if (!nonEmptyGroups.contains(knownGroup)) {
+      appendTopLevelGroup(knownGroup);
     }
   }
 

@@ -51,6 +51,26 @@
        </property>
       </widget>
      </item>
+    <item>
+     <widget class="QPushButton" name="resetGroupsButton">
+      <property name="toolTip">
+       <string>Reset group structure without changing load order.</string>
+      </property>
+      <property name="text">
+       <string>Reset Groups</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="cleanGroupsButton">
+      <property name="toolTip">
+       <string>Clean empty groups and separators.</string>
+      </property>
+      <property name="text">
+       <string>Clean Groups</string>
+      </property>
+     </widget>
+    </item>
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">

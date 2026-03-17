@@ -81,6 +81,15 @@ public:
   void shiftPriority(const std::vector<int>& ids, int offset);
 
   void setGroup(const std::vector<int>& ids, const QString& group);
+  void renameGroup(const QString& oldGroup, const QString& newGroup);
+  void removeGroup(const QString& group);
+  void mergeGroup(const QString& fromGroup, const QString& toGroup);
+  void resetGroupsStructure();
+  void cleanEmptyGroups();
+
+  void lockPlugin(int id, bool locked);
+
+  [[nodiscard]] QStringList knownGroups() const;
 
   [[nodiscard]] QStringList loadOrder() const;
 
@@ -111,9 +120,15 @@ public:
   [[nodiscard]] bool hasMasterExtension(const QString& name) const override;
   [[nodiscard]] bool hasLightExtension(const QString& name) const override;
   [[nodiscard]] bool isMasterFlagged(const QString& name) const override;
+  [[nodiscard]] bool isMediumFlagged(const QString& name) const override;
   [[nodiscard]] bool isLightFlagged(const QString& name) const override;
-  [[nodiscard]] bool isOverlayFlagged(const QString& name) const override;
+  [[nodiscard]] bool isBlueprintFlagged(const QString& name) const;
+  [[nodiscard]] bool isOverlayFlagged(const QString& name) const;
   [[nodiscard]] bool hasNoRecords(const QString& name) const override;
+  [[nodiscard]] int formVersion(const QString& name) const;
+  [[nodiscard]] float headerVersion(const QString& name) const;
+  [[nodiscard]] QString author(const QString& name) const;
+  [[nodiscard]] QString description(const QString& name) const;
 
   // ILootCache
 
@@ -140,9 +155,13 @@ private:
   [[nodiscard]] QString groupsPath() const;
   [[nodiscard]] QString lockedOrderPath() const;
   void clearGroups();
+  void clearLockedOrder();
+  void rememberGroup(const QString& group);
   void readGroups(const QString& fileName);
+  void readLockedOrder(const QString& fileName);
   void writeEmptyTextFile(const QString& fileName) const;
   void writeGroups(const QString& fileName) const;
+  void writeLockedOrder(const QString& fileName) const;
   [[nodiscard]] QString destinationGroup(
       int oldPriority, int newPriority, const QString& originalGroup, bool isESM,
       const boost::container::flat_set<QString, MOBase::FileNameComparator>&
@@ -163,6 +182,8 @@ private:
 
   std::map<QString, int, MOBase::FileNameComparator> m_PluginsByName;
   std::vector<int> m_PluginsByPriority;
+
+  QStringList m_KnownGroups;
 
   std::map<QString, MOTools::Loot::Plugin, MOBase::FileNameComparator> m_LootInfo;
 

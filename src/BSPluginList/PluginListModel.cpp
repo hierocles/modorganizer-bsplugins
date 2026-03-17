@@ -15,6 +15,13 @@ namespace BSPluginList
 
 PluginListModel::PluginListModel(TESData::PluginList* plugins) : m_Plugins{plugins} {}
 
+void PluginListModel::clearRoleCaches() const
+{
+  m_ConflictCache.clear();
+  m_FlagsCache.clear();
+  m_TooltipCache.clear();
+}
+
 QModelIndex PluginListModel::index(int row, int column,
                                    [[maybe_unused]] const QModelIndex& parent) const
 {
@@ -298,13 +305,19 @@ static QString makeLootTooltip(const MOTools::Loot::Plugin& lootInfo)
 
 QVariant PluginListModel::tooltipData(const QModelIndex& index) const
 {
-  const int id        = index.row();
-  const auto plugin   = m_Plugins->getPlugin(id);
-  const auto lootInfo = m_Plugins->getLootReport(plugin->name());
+  const int id      = index.row();
+  const int cacheId = id * 16 + index.column();
+  if (m_TooltipCache.contains(cacheId)) {
+    return m_TooltipCache.value(cacheId);
+  }
+
+  const auto plugin = m_Plugins->getPlugin(id);
 
   if (!plugin) {
     return QVariant();
   }
+
+  const auto lootInfo = m_Plugins->getLootReport(plugin->name());
 
   switch (index.column()) {
   case COL_NAME: {
@@ -371,6 +384,7 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
                           "typically used to load a paired archive file.");
     }
 
+    m_TooltipCache.insert(cacheId, toolTip);
     return toolTip;
   }
   case COL_CONFLICTS: {
@@ -397,6 +411,7 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
     } else if (conflictFlags & CONFLICT_ARCHIVE_OVERWRITTEN) {
       toolTip += tr("Overwritten by another archive file");
     }
+    m_TooltipCache.insert(cacheId, toolTip);
     return toolTip;
   }
   case COL_FLAGS: {
@@ -464,6 +479,7 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
       toolTip += lootToolTip;
     }
 
+    m_TooltipCache.insert(cacheId, toolTip);
     return toolTip;
   }
   default:
@@ -474,8 +490,17 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
 QVariant PluginListModel::conflictData(const QModelIndex& index) const
 {
   const int id      = index.row();
+  if (m_ConflictCache.contains(id)) {
+    return m_ConflictCache.value(id);
+  }
+
   const auto plugin = m_Plugins->getPlugin(id);
-  return plugin->conflictState();
+  if (!plugin) {
+    return QVariant();
+  }
+  const auto result = QVariant::fromValue(plugin->conflictState());
+  m_ConflictCache.insert(id, result);
+  return result;
 }
 
 static bool isProblematic(const TESData::FileInfo* plugin,
@@ -500,13 +525,18 @@ static bool isProblematic(const TESData::FileInfo* plugin,
 
 QVariant PluginListModel::iconData(const QModelIndex& index) const
 {
-  const int id        = index.row();
-  const auto plugin   = m_Plugins->getPlugin(id);
-  const auto lootInfo = m_Plugins->getLootReport(plugin->name());
+  const int id      = index.row();
+  if (m_FlagsCache.contains(id)) {
+    return m_FlagsCache.value(id);
+  }
+
+  const auto plugin = m_Plugins->getPlugin(id);
 
   if (!plugin) {
     return QVariant();
   }
+
+  const auto lootInfo = m_Plugins->getLootReport(plugin->name());
 
   using enum TESData::FileInfo::EFlag;
   uint flag = 0;
@@ -544,7 +574,13 @@ QVariant PluginListModel::iconData(const QModelIndex& index) const
     flag |= FLAG_CLEAN;
   }
 
-  return flag;
+  if (plugin->lockedOrder()) {
+    flag |= FLAG_LOCKED;
+  }
+
+  const auto result = QVariant::fromValue(flag);
+  m_FlagsCache.insert(id, result);
+  return result;
 }
 
 QVariant PluginListModel::headerData(int section, Qt::Orientation orientation,
@@ -583,6 +619,8 @@ int PluginListModel::columnCount([[maybe_unused]] const QModelIndex& parent) con
 
 bool PluginListModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
+  clearRoleCaches();
+
   if (role == Qt::CheckStateRole) {
     const int id = index.row();
     m_Plugins->setEnabled(id, value.toInt() == Qt::Checked);
@@ -681,6 +719,16 @@ PluginListModel::groups(std::function<bool(const TESData::FileInfo*)> pred) cons
     lastGroup = group;
   }
 
+  for (const auto& group : m_Plugins->knownGroups()) {
+    if (group.isEmpty()) {
+      continue;
+    }
+
+    if (groupSet.insert(group).second) {
+      groups.append(group);
+    }
+  }
+
   return groups;
 }
 
@@ -700,6 +748,7 @@ QStringList PluginListModel::regularGroups() const
 
 void PluginListModel::refresh()
 {
+  clearRoleCaches();
   emit beginResetModel();
   m_Plugins->refresh();
   emit endResetModel();
@@ -707,6 +756,7 @@ void PluginListModel::refresh()
 
 void PluginListModel::invalidate()
 {
+  clearRoleCaches();
   emit beginResetModel();
   m_Plugins->refresh(true);
   emit endResetModel();
@@ -714,6 +764,9 @@ void PluginListModel::invalidate()
 
 void PluginListModel::invalidateConflicts()
 {
+  m_ConflictCache.clear();
+  m_TooltipCache.clear();
+
   for (int i = 0, count = m_Plugins->pluginCount(); i < count; ++i) {
     const auto plugin = m_Plugins->getPlugin(i);
     plugin->invalidateConflicts();
@@ -726,6 +779,7 @@ void PluginListModel::invalidateConflicts()
 void PluginListModel::movePlugin(const QString& name, [[maybe_unused]] int oldPriority,
                                  int newPriority)
 {
+  clearRoleCaches();
   m_Plugins->setPriority(name, newPriority);
   emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
                    {Qt::DisplayRole, GroupingRole});
@@ -735,6 +789,8 @@ void PluginListModel::movePlugin(const QString& name, [[maybe_unused]] int oldPr
 void PluginListModel::changePluginStates(
     const std::map<QString, MOBase::IPluginList::PluginStates>& infos)
 {
+  clearRoleCaches();
+
   QModelIndexList indices;
   for (auto& [name, state] : infos) {
     m_Plugins->setState(name, state);
@@ -745,13 +801,24 @@ void PluginListModel::changePluginStates(
     }
   }
 
-  emit dataChanged(index(0, 0), index(rowCount() - 1, COL_MODINDEX),
-                   {Qt::DisplayRole, Qt::CheckStateRole});
+  if (!indices.empty()) {
+    int minRow = indices.front().row();
+    int maxRow = minRow;
+    for (const auto& idx : indices) {
+      minRow = std::min(minRow, idx.row());
+      maxRow = std::max(maxRow, idx.row());
+    }
+
+    emit dataChanged(index(minRow, 0), index(maxRow, COL_MODINDEX),
+                     {Qt::DisplayRole, Qt::CheckStateRole, ConflictsIconRole,
+                      FlagsIconRole});
+  }
   emit pluginStatesChanged(indices);
 }
 
 void PluginListModel::setEnabledAll(bool enabled)
 {
+  clearRoleCaches();
   QModelIndexList indices;
   indices.reserve(rowCount());
   std::generate_n(std::back_inserter(indices), rowCount(), [this, i = 0]() mutable {
@@ -765,6 +832,8 @@ void PluginListModel::setEnabled(const QModelIndexList& indices, bool enabled)
   if (indices.empty()) {
     return;
   }
+
+  clearRoleCaches();
 
   std::vector<int> ids;
   ids.reserve(indices.size());
@@ -781,6 +850,8 @@ void PluginListModel::sendToPriority(const QModelIndexList& indices, int priorit
   if (indices.empty()) {
     return;
   }
+
+  clearRoleCaches();
 
   std::vector<int> ids;
   ids.reserve(indices.size());
@@ -799,6 +870,8 @@ void PluginListModel::shiftPluginsPriority(const QModelIndexList& indices, int o
     return;
   }
 
+  clearRoleCaches();
+
   std::vector<int> ids;
   ids.reserve(indices.size());
   std::ranges::transform(indices, std::back_inserter(ids), [](auto&& idx) {
@@ -816,6 +889,8 @@ void PluginListModel::toggleState(const QModelIndexList& indices)
     return;
   }
 
+  clearRoleCaches();
+
   std::vector<int> ids;
   ids.reserve(indices.size());
   std::ranges::transform(indices, std::back_inserter(ids), [](auto&& idx) {
@@ -831,19 +906,99 @@ void PluginListModel::setGroup(const QModelIndexList& indices, const QString& gr
     return;
   }
 
+  clearRoleCaches();
+
   std::vector<int> ids;
   ids.reserve(indices.size());
   std::ranges::transform(indices, std::back_inserter(ids), [](auto&& idx) {
     return idx.row();
   });
   m_Plugins->setGroup(std::move(ids), group);
-  emit dataChanged(this->index(0, 0), this->index(rowCount() - 1, COL_MODINDEX),
-                   {GroupingRole});
+
+  int minRow = indices.front().row();
+  int maxRow = minRow;
+  for (const auto& idx : indices) {
+    minRow = std::min(minRow, idx.row());
+    maxRow = std::max(maxRow, idx.row());
+  }
+
+  emit dataChanged(this->index(minRow, 0), this->index(maxRow, COL_MODINDEX),
+                   {GroupingRole, Qt::DisplayRole});
+}
+
+void PluginListModel::renameGroup(const QString& oldGroup, const QString& newGroup)
+{
+  clearRoleCaches();
+  m_Plugins->renameGroup(oldGroup, newGroup);
+  emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                   {Qt::DisplayRole, GroupingRole});
+  emit pluginOrderChanged();
+}
+
+void PluginListModel::removeGroup(const QString& group)
+{
+  clearRoleCaches();
+  m_Plugins->removeGroup(group);
+  emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                   {Qt::DisplayRole, GroupingRole});
+  emit pluginOrderChanged();
+}
+
+void PluginListModel::mergeGroup(const QString& fromGroup, const QString& toGroup)
+{
+  clearRoleCaches();
+  m_Plugins->mergeGroup(fromGroup, toGroup);
+  emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                   {Qt::DisplayRole, GroupingRole});
+  emit pluginOrderChanged();
+}
+
+void PluginListModel::resetGroupsStructure()
+{
+  clearRoleCaches();
+  m_Plugins->resetGroupsStructure();
+  emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                   {Qt::DisplayRole, GroupingRole});
+  emit pluginOrderChanged();
+}
+
+void PluginListModel::cleanEmptyGroups()
+{
+  clearRoleCaches();
+  m_Plugins->cleanEmptyGroups();
+  emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                   {Qt::DisplayRole, GroupingRole});
+  emit pluginOrderChanged();
+}
+
+void PluginListModel::lockPlugins(const QModelIndexList& indices, bool locked)
+{
+  if (indices.empty()) {
+    return;
+  }
+
+  clearRoleCaches();
+
+  for (const auto& idx : indices) {
+    m_Plugins->lockPlugin(idx.row(), locked);
+  }
+
+  int minRow = indices.front().row();
+  int maxRow = minRow;
+  for (const auto& idx : indices) {
+    minRow = std::min(minRow, idx.row());
+    maxRow = std::max(maxRow, idx.row());
+  }
+
+  emit dataChanged(index(minRow, COL_FLAGS), index(maxRow, COL_FLAGS),
+                   {FlagsIconRole});
 }
 
 void PluginListModel::sendToGroup(const QModelIndexList& indices, const QString& group,
                                   bool isESM)
 {
+  clearRoleCaches();
+
   int destination = -1;
   for (int priority = 0, count = m_Plugins->pluginCount(); priority < count;
        ++priority) {
