@@ -1,12 +1,14 @@
 #include "PluginListContextMenu.h"
 #include "GUI/ListDialog.h"
 #include "MOPlugin/Settings.h"
+#include "PluginGroupProxyModel.h"
 #include "PluginListModel.h"
 #include "PluginListView.h"
 #include "TESData/FileInfo.h"
 
 #include <utility.h>
 
+#include <QColorDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 
@@ -166,7 +168,9 @@ void PluginListContextMenu::addSelectedFilesActions()
           tr("Note:"), plugin->notes(), &ok);
 
       if (ok) {
-        m_Model->setData(m_ModelSelected.first(), note, Qt::EditRole);
+        m_Model->setData(
+            m_ModelSelected.first().siblingAtColumn(PluginListModel::COL_NOTES), note,
+            Qt::EditRole);
       }
     });
   } else if (m_FilesSelected && m_ModelSelected.length() > 1) {
@@ -178,7 +182,8 @@ void PluginListContextMenu::addSelectedFilesActions()
 
       if (ok && !note.isEmpty()) {
         for (const auto& idx : m_ModelSelected) {
-          m_Model->setData(idx, note, Qt::EditRole);
+          m_Model->setData(idx.siblingAtColumn(PluginListModel::COL_NOTES), note,
+                           Qt::EditRole);
         }
       }
     });
@@ -187,18 +192,57 @@ void PluginListContextMenu::addSelectedFilesActions()
 
 void PluginListContextMenu::addSelectedGroupActions()
 {
-  if (!m_GroupsSelected || m_ViewSelected.length() != 1)
+  if (!m_GroupsSelected)
     return;
 
   addSeparator();
 
-  const auto selectedIndex = m_ViewSelected.first();
-  const bool expanded      = m_View->isExpanded(selectedIndex);
-  addAction(tr("Collapse others"), [=, this]() {
-    m_View->collapseAll();
-    m_View->setExpanded(selectedIndex, expanded);
-    m_View->scrollTo(selectedIndex);
+  addAction(tr("Enable Group"), [this]() {
+    const auto children = m_View->indexViewToModel(m_ViewSelected, m_Model, true);
+    m_Model->setEnabled(children, true);
   });
+  addAction(tr("Disable Group"), [this]() {
+    const auto children = m_View->indexViewToModel(m_ViewSelected, m_Model, true);
+    m_Model->setEnabled(children, false);
+  });
+
+  if (m_ViewSelected.length() == 1) {
+    const auto selectedIndex = m_ViewSelected.first();
+    const bool expanded      = m_View->isExpanded(selectedIndex);
+    const QString groupName  = selectedIndex.data(Qt::DisplayRole).toString();
+
+    addAction(tr("Collapse others"), [=, this]() {
+      m_View->collapseAll();
+      m_View->setExpanded(selectedIndex, expanded);
+      m_View->scrollTo(selectedIndex);
+    });
+
+    addSeparator();
+
+    addAction(tr("Set Group Color..."), [=, this]() {
+      auto* const groupProxy =
+          qobject_cast<PluginGroupProxyModel*>(m_View->model());
+      if (!groupProxy)
+        return;
+
+      const QColor current = groupProxy->groupColor(groupName);
+      QColorDialog dlg(current.isValid() ? current : Qt::white,
+                       m_View->topLevelWidget());
+      dlg.setWindowTitle(tr("Set Group Color: ") + groupName);
+      dlg.setOption(QColorDialog::ShowAlphaChannel);
+      if (dlg.exec() == QDialog::Accepted) {
+        groupProxy->setGroupColor(groupName, dlg.selectedColor());
+      }
+    });
+
+    addAction(tr("Clear Group Color"), [=, this]() {
+      auto* const groupProxy =
+          qobject_cast<PluginGroupProxyModel*>(m_View->model());
+      if (groupProxy) {
+        groupProxy->setGroupColor(groupName, QColor());
+      }
+    });
+  }
 }
 
 void PluginListContextMenu::addSelectionActions()

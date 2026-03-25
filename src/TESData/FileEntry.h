@@ -45,6 +45,7 @@ public:
   [[nodiscard]] const std::string& name() const { return m_Name; }
   [[nodiscard]] TreeItem* dataRoot() const { return m_Root.get(); }
   [[nodiscard]] const std::vector<std::string>& files() const { return m_Files; }
+  [[nodiscard]] int recordCount() const;
 
   void
   forEachRecord(std::function<void(const std::shared_ptr<const Record>&)> func) const;
@@ -67,6 +68,7 @@ private:
   std::shared_ptr<TreeItem> m_Root;
   std::vector<std::string> m_Files;
   mutable std::shared_mutex m_Mutex;
+  mutable std::optional<int> m_CachedRecordCount;
 };
 
 }  // namespace TESData

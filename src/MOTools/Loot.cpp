@@ -36,7 +36,7 @@ public:
 
   env::HandlePtr create()
   {
-    // creating pipe
+
     env::HandlePtr out{createPipe()};
     if (out.get() == INVALID_HANDLE_VALUE) {
       return {};
@@ -85,7 +85,7 @@ private:
 
     env::HandlePtr pipe;
 
-    // creating pipe
+
     {
       HANDLE pipeHandle =
           ::CreateNamedPipe(PipeName, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
@@ -102,7 +102,7 @@ private:
     }
 
     {
-      // duplicating the handle to read from it
+
       HANDLE outputRead = INVALID_HANDLE_VALUE;
 
       const auto r =
@@ -118,7 +118,7 @@ private:
       m_Stdout.reset(outputRead);
     }
 
-    // creating handle to pipe which is passed to CreateProcess()
+
     HANDLE outputWrite = ::CreateFile(PipeName, FILE_WRITE_DATA | SYNCHRONIZE, 0, &sa,
                                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
@@ -145,7 +145,7 @@ private:
       }
 
       case ERROR_BROKEN_PIPE: {
-        // broken pipe probably means lootcli is finished
+
         break;
       }
 
@@ -187,7 +187,7 @@ private:
       }
 
       case ERROR_BROKEN_PIPE: {
-        // broken pipe probably means lootcli is finished
+
         break;
       }
 
@@ -212,7 +212,7 @@ static log::Levels levelFromLoot(lootcli::LogLevels level)
   using LC = lootcli::LogLevels;
 
   switch (level) {
-  case LC::Trace:  // fall-through
+  case LC::Trace:
   case LC::Debug:
     return log::Debug;
 
@@ -238,7 +238,7 @@ QString Loot::Report::toMarkdown() const
     s += "## " + tr("Loot failed to run") + "\n";
 
     if (errors.empty() && warnings.empty()) {
-// FIXME: we can't pass an stdout handle to lootcli, so we can't get errors
+
 #ifdef LOOT_STDOUT_AVAILABLE
       s += tr("No errors were reported. The log below might have more information.\n");
 #else
@@ -456,12 +456,12 @@ bool Loot::start(QWidget* parent, bool didUpdateMasterList)
   m_Pipe.reset(new AsyncPipe);
   env::HandlePtr stdoutHandle = m_Pipe->create();
 
-  // spawning
+
   if (!spawnLootcli(parent, didUpdateMasterList, std::move(stdoutHandle))) {
     return false;
   }
 
-  // starting thread
+
   log::debug("starting loot thread");
   m_Thread.reset(QThread::create([this] {
     lootThread();
@@ -498,7 +498,7 @@ bool Loot::spawnLootcli(QWidget* parent, bool didUpdateMasterList,
   QString binary           = qApp->applicationDirPath() + "/loot/lootcli.exe";
   QString currentDirectory = qApp->applicationDirPath() + "/loot";
 
-  // FIXME: IOrganizer doesn't allow us to capture stdout
+
   HANDLE lootHandle =
       m_Organizer->startApplication(binary, parameters, currentDirectory);
 
@@ -572,7 +572,7 @@ bool Loot::waitForCompletion()
 
     if (res == WAIT_OBJECT_0) {
       log::debug("lootcli has completed");
-      // done
+
       break;
     }
 
@@ -606,7 +606,7 @@ bool Loot::waitForCompletion()
     processStdout(m_Pipe->read());
   }
 
-  // checking exit code
+
   DWORD exitCode = 0;
 
   if (!::GetExitCodeProcess(m_LootProcess.get(), &exitCode)) {
@@ -767,8 +767,8 @@ Loot::Plugin Loot::reportPlugin(const QJsonObject& plugin) const
     return {};
   }
 
-  // ignore disabled plugins; lootcli doesn't know if a plugin is enabled or not
-  // and will report information on any plugin that's in the filesystem
+
+
   if (m_Organizer->pluginList()->state(p.name) != IPluginList::STATE_ACTIVE) {
     return {};
   }

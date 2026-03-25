@@ -1,4 +1,5 @@
 #include "PluginGroupProxyModel.h"
+#include "MOPlugin/Settings.h"
 #include "PluginListDropInfo.h"
 #include "PluginListModel.h"
 #include "PluginSortFilterProxyModel.h"
@@ -108,6 +109,10 @@ QModelIndex PluginGroupProxyModel::mapFromSource(const QModelIndex& sourceIndex)
     return QModelIndex();
   }
 
+  if (sourceIndex.row() >= static_cast<int>(m_SourceMap.size())) {
+    return QModelIndex();
+  }
+
   const auto id    = m_SourceMap[sourceIndex.row()];
   const auto& item = m_ProxyItems.at(id);
   QModelIndex parentIndex;
@@ -188,6 +193,19 @@ QVariant PluginGroupProxyModel::data(const QModelIndex& index, int role) const
   }
 
   if (const auto& group = item.groupInfo) {
+    if (role == Qt::BackgroundRole) {
+
+      if (!m_GroupColors.contains(group->name)) {
+        const QString colorStr =
+            Settings::instance()
+                ->get("group_color_" + group->name, QVariant())
+                .toString();
+        m_GroupColors[group->name] =
+            colorStr.isEmpty() ? QColor() : QColor(colorStr);
+      }
+      const QColor color = m_GroupColors.value(group->name);
+      return color.isValid() ? QVariant(color) : QVariant();
+    }
     return groupData(group->name, index.column(), role);
   }
 
@@ -217,6 +235,31 @@ bool PluginGroupProxyModel::setData(const QModelIndex& index, const QVariant& va
   return false;
 }
 
+void PluginGroupProxyModel::setGroupColor(const QString& groupName, const QColor& color)
+{
+
+  m_GroupColors[groupName] = color;
+
+  const QVariant colorValue =
+      color.isValid() ? QVariant(color.name(QColor::HexArgb)) : QVariant();
+  Settings::instance()->set("group_color_" + groupName, colorValue);
+
+
+  for (int row = 0, count = rowCount(); row < count; ++row) {
+    const auto idx = index(row, 0);
+    if (idx.data(Qt::DisplayRole).toString() == groupName) {
+      emit dataChanged(idx, idx.siblingAtColumn(columnCount() - 1),
+                       {Qt::BackgroundRole});
+      break;
+    }
+  }
+}
+
+QColor PluginGroupProxyModel::groupColor(const QString& groupName) const
+{
+  return m_GroupColors.value(groupName);
+}
+
 QModelIndex PluginGroupProxyModel::buddy(const QModelIndex& index) const
 {
   const auto& item = m_ProxyItems.at(index.internalId());
@@ -239,6 +282,9 @@ int PluginGroupProxyModel::mapLowerBoundToSourceRow(std::size_t id) const
   if (item.isSourceItem()) {
     return item.sourceRow;
   } else if (item.isGroup()) {
+    if (item.groupInfo->children.empty()) {
+      return -1;
+    }
     const auto child      = item.groupInfo->children.front();
     const auto& childItem = m_ProxyItems.at(child);
     return childItem.sourceRow;
@@ -298,7 +344,7 @@ bool PluginGroupProxyModel::canDropMimeData(const QMimeData* data,
                                             Qt::DropAction action, int row, int column,
                                             const QModelIndex& parent_) const
 {
-  // HACK: fix drop below expanded item
+
   auto parent = parent_;
   if (m_DroppingBelowExpandedItem) {
     parent = index(row - 1, column, parent_);
@@ -346,7 +392,7 @@ bool PluginGroupProxyModel::dropMimeData(const QMimeData* data, Qt::DropAction a
                                          int row, int column,
                                          const QModelIndex& parent_)
 {
-  // HACK: fix drop below expanded item
+
   auto parent = parent_;
   if (m_DroppingBelowExpandedItem) {
     parent = index(row - 1, column, parent_);
@@ -435,6 +481,11 @@ void PluginGroupProxyModel::onSourceLayoutChanged(
 void PluginGroupProxyModel::onSourceModelReset()
 {
   beginResetModel();
+
+
+
+  m_ProxyItems.clear();
+  m_ItemMap.clear();
   buildGroups();
   endResetModel();
 }
@@ -606,8 +657,8 @@ void PluginGroupProxyModel::buildGroups()
     }
 
     if (invalidate) {
-      // we want to try to keep items alive even if they are temporarily removed from
-      // the model, so assign them to an index that looks valid but won't be displayed
+
+
       const int fakeRow = static_cast<int>(m_TopLevel.size());
       for (int column = 0, count = columnCount(); column < count; ++column) {
         changePersistentIndex(createIndex(item.row, column, id),

@@ -81,6 +81,13 @@ bool IPluginPanel::init(MOBase::IOrganizer* organizer)
           tabWidget->insertTab(index + 1, widget, label);
           if (position.order_ == Order::InPlaceOf) {
             tabWidget->removeTab(index);
+
+
+
+
+
+            refTab->setObjectName({});
+            widget->setObjectName(position.reference_);
           }
         }
         break;

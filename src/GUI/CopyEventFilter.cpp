@@ -24,7 +24,7 @@ void CopyEventFilter::copySelection() const
     return;
   }
 
-  // sort to reflect the visual order
+
   QModelIndexList selectedRows = m_View->selectionModel()->selectedRows();
   std::ranges::sort(selectedRows, [this](const auto& lidx, const auto& ridx) {
     return m_View->visualRect(lidx).top() < m_View->visualRect(ridx).top();

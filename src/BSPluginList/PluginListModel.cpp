@@ -6,7 +6,10 @@
 #include <QMimeData>
 
 #include <algorithm>
+#include <future>
 #include <iterator>
+#include <semaphore>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -176,6 +179,10 @@ QVariant PluginListModel::displayData(const QModelIndex& index) const
     return plugin->index();
   case COL_NOTES:
     return plugin->notes();
+  case COL_RECORDS: {
+    const auto entry = m_Plugins->findEntryByName(plugin->name().toStdString());
+    return entry ? entry->recordCount() : QVariant();
+  }
   default:
     return QVariant();
   }
@@ -191,7 +198,7 @@ QVariant PluginListModel::checkstateData(const QModelIndex& index) const
   }
 
   if (plugin->isAlwaysEnabled()) {
-    // HACK: PluginListStyledItemDelegate draws the checkbox separately
+
     return QVariant();
   } else if (plugin->forceDisabled()) {
     return QVariant();
@@ -240,6 +247,23 @@ QVariant PluginListModel::fontData(const QModelIndex& index) const
   if (index.column() == COL_NAME) {
     if (plugin && plugin->hasNoRecords()) {
       result.setItalic(true);
+    }
+    if (plugin && Settings::instance()->enableTypefaceIndicators()) {
+      const QString& pluginName = plugin->name();
+
+
+
+      const bool isEsl = pluginName.endsWith(QLatin1String(".esl"), Qt::CaseInsensitive);
+      const bool isLight = isEsl || plugin->isLightFlagged();
+      const bool isMaster = isEsl ||
+                            pluginName.endsWith(QLatin1String(".esm"), Qt::CaseInsensitive) ||
+                            plugin->isMasterFlagged();
+      if (isLight) {
+        result.setItalic(true);
+      }
+      if (isMaster) {
+        result.setBold(true);
+      }
     }
   }
 
@@ -434,7 +458,7 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
     return toolTip;
   }
   case COL_FLAGS: {
-    // HACK: insert some HTML to enable multiline tooltips
+
     QString toolTip       = "<nobr/>";
     const QString spacing = "<br><br>";
 
@@ -624,6 +648,8 @@ QVariant PluginListModel::headerData(int section, Qt::Orientation orientation,
         return tr("Mod Index");
       case COL_NOTES:
         return tr("Notes");
+      case COL_RECORDS:
+        return tr("Records");
       default:
         return tr("unknown");
       }
@@ -644,13 +670,15 @@ int PluginListModel::columnCount([[maybe_unused]] const QModelIndex& parent) con
 
 bool PluginListModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
-  clearRoleCaches();
-
   if (role == Qt::CheckStateRole) {
+    clearRoleCaches();
     const int id = index.row();
     m_Plugins->setEnabled(id, value.toInt() == Qt::Checked);
+
+
     emit dataChanged(this->index(0, 0), this->index(rowCount() - 1, COL_MODINDEX),
-                     {Qt::EditRole, Qt::CheckStateRole});
+                     {Qt::EditRole, Qt::CheckStateRole,
+                      ConflictsIconRole, FlagsIconRole});
     emit pluginStatesChanged({index});
     return true;
   } else if (role == Qt::EditRole) {
@@ -658,14 +686,16 @@ bool PluginListModel::setData(const QModelIndex& index, const QVariant& value, i
       bool ok;
       const int newPriority = value.toInt(&ok);
       if (ok) {
+        clearRoleCaches();
         int destination = newPriority;
         if (newPriority > index.data(Qt::EditRole).toInt()) {
           ++destination;
         }
         m_Plugins->moveToPriority({index.row()}, destination);
+
         emit dataChanged(this->index(0, 0),
                          this->index(rowCount() - 1, columnCount() - 1),
-                         {Qt::EditRole, GroupingRole});
+                         {Qt::EditRole});
         emit pluginOrderChanged();
         return true;
       }
@@ -673,6 +703,7 @@ bool PluginListModel::setData(const QModelIndex& index, const QVariant& value, i
       const int id = index.row();
       const auto plugin = m_Plugins->getPlugin(id);
       if (plugin) {
+
         plugin->setNotes(value.toString());
         emit dataChanged(index, index, {Qt::EditRole, Qt::DisplayRole});
         return true;
@@ -779,11 +810,63 @@ QStringList PluginListModel::regularGroups() const
   });
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+static void prewarmConflicts(TESData::PluginList* plugins)
+{
+  if (!Settings::instance()->enablePluginConflictManagement()) {
+    return;
+  }
+
+  const int count = plugins->pluginCount();
+
+
+  std::vector<const TESData::FileInfo*> toWarm;
+  toWarm.reserve(count);
+  for (int i = 0; i < count; ++i) {
+    if (const auto* plugin = plugins->getPlugin(i)) {
+      if (plugin->enabled()) {
+        toWarm.push_back(plugin);
+      }
+    }
+  }
+
+
+  const uint concurrency = std::max(2U, std::thread::hardware_concurrency());
+  std::counting_semaphore smph{concurrency};
+
+  std::vector<std::future<void>> futures;
+  futures.reserve(toWarm.size());
+  for (const auto* plugin : toWarm) {
+    futures.push_back(std::async(std::launch::async, [plugin, &smph]() {
+      smph.acquire();
+      (void)plugin->conflictState();
+      smph.release();
+    }));
+  }
+  for (auto& f : futures) {
+    f.wait();
+  }
+}
+
 void PluginListModel::refresh()
 {
   clearRoleCaches();
   emit beginResetModel();
   m_Plugins->refresh();
+  prewarmConflicts(m_Plugins);
+  m_ConflictCache.reserve(m_Plugins->pluginCount());
+  m_FlagsCache.reserve(m_Plugins->pluginCount());
   emit endResetModel();
 }
 
@@ -792,6 +875,9 @@ void PluginListModel::invalidate()
   clearRoleCaches();
   emit beginResetModel();
   m_Plugins->refresh(true);
+  prewarmConflicts(m_Plugins);
+  m_ConflictCache.reserve(m_Plugins->pluginCount());
+  m_FlagsCache.reserve(m_Plugins->pluginCount());
   emit endResetModel();
 }
 
@@ -822,8 +908,9 @@ void PluginListModel::movePlugin(const QString& name, [[maybe_unused]] int oldPr
 {
   clearRoleCaches();
   m_Plugins->setPriority(name, newPriority);
+
   emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
-                   {Qt::DisplayRole, GroupingRole});
+                   {Qt::DisplayRole});
   emit pluginOrderChanged();
 }
 
@@ -850,16 +937,16 @@ void PluginListModel::changePluginStates(
       maxRow = std::max(maxRow, idx.row());
     }
 
+
     emit dataChanged(index(minRow, 0), index(maxRow, COL_MODINDEX),
-                     {Qt::DisplayRole, Qt::CheckStateRole, ConflictsIconRole,
-                      FlagsIconRole});
+                     {Qt::DisplayRole, Qt::CheckStateRole,
+                      ConflictsIconRole, FlagsIconRole});
   }
   emit pluginStatesChanged(indices);
 }
 
 void PluginListModel::setEnabledAll(bool enabled)
 {
-  clearRoleCaches();
   QModelIndexList indices;
   indices.reserve(rowCount());
   std::generate_n(std::back_inserter(indices), rowCount(), [this, i = 0]() mutable {
@@ -882,6 +969,18 @@ void PluginListModel::setEnabled(const QModelIndexList& indices, bool enabled)
     return idx.row();
   });
   m_Plugins->setEnabled(std::move(ids), enabled);
+
+  int minRow = indices.front().row();
+  int maxRow = minRow;
+  for (const auto& idx : indices) {
+    minRow = std::min(minRow, idx.row());
+    maxRow = std::max(maxRow, idx.row());
+  }
+
+
+  emit dataChanged(index(minRow, 0), index(maxRow, COL_MODINDEX),
+                   {Qt::DisplayRole, Qt::CheckStateRole,
+                    ConflictsIconRole, FlagsIconRole});
   emit pluginStatesChanged(indices);
 }
 
@@ -900,6 +999,7 @@ void PluginListModel::sendToPriority(const QModelIndexList& indices, int priorit
     return idx.row();
   });
   m_Plugins->moveToPriority(std::move(ids), priority, disjoint);
+
   emit dataChanged(index(0, COL_PRIORITY), index(rowCount() - 1, COL_MODINDEX),
                    {Qt::DisplayRole});
   emit pluginOrderChanged();
@@ -919,6 +1019,7 @@ void PluginListModel::shiftPluginsPriority(const QModelIndexList& indices, int o
     return idx.row();
   });
   m_Plugins->shiftPriority(std::move(ids), offset);
+
   emit dataChanged(index(0, COL_PRIORITY), index(rowCount() - 1, COL_MODINDEX),
                    {Qt::DisplayRole});
   emit pluginOrderChanged();
@@ -938,6 +1039,18 @@ void PluginListModel::toggleState(const QModelIndexList& indices)
     return idx.row();
   });
   m_Plugins->toggleState(std::move(ids));
+
+  int minRow = indices.front().row();
+  int maxRow = minRow;
+  for (const auto& idx : indices) {
+    minRow = std::min(minRow, idx.row());
+    maxRow = std::max(maxRow, idx.row());
+  }
+
+
+  emit dataChanged(index(minRow, 0), index(maxRow, COL_MODINDEX),
+                   {Qt::DisplayRole, Qt::CheckStateRole,
+                    ConflictsIconRole, FlagsIconRole});
   emit pluginStatesChanged(indices);
 }
 
@@ -1038,8 +1151,6 @@ void PluginListModel::lockPlugins(const QModelIndexList& indices, bool locked)
 void PluginListModel::sendToGroup(const QModelIndexList& indices, const QString& group,
                                   bool isESM)
 {
-  clearRoleCaches();
-
   int destination = -1;
   for (int priority = 0, count = m_Plugins->pluginCount(); priority < count;
        ++priority) {
@@ -1051,6 +1162,8 @@ void PluginListModel::sendToGroup(const QModelIndexList& indices, const QString&
 
   if (destination == -1)
     return;
+
+  clearRoleCaches();
 
   std::vector<int> ids;
   ids.reserve(indices.size());

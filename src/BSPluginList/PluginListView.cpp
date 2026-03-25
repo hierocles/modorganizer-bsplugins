@@ -40,6 +40,8 @@ void PluginListView::setup()
   header()->resizeSection(PluginListModel::COL_FLAGS, 60);
   header()->resizeSection(PluginListModel::COL_PRIORITY, 62);
   header()->resizeSection(PluginListModel::COL_MODINDEX, 79);
+  header()->resizeSection(PluginListModel::COL_RECORDS, 70);
+  header()->hideSection(PluginListModel::COL_RECORDS);
   header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
   connect(this, &QTreeView::collapsed, this, &PluginListView::updateOverwriteMarkers);
@@ -102,7 +104,7 @@ QColor PluginListView::markerColor(const QModelIndex& index) const
     const bool overwritingAux = m_Markers.overwritingAux.contains(pluginIndex);
     const bool overwrittenAux = m_Markers.overwrittenAux.contains(pluginIndex);
 
-    // the color logic looks backwards but this is what the mod list does
+
     if (highlight) {
       return Settings::instance()->containedColor();
     } else if (overridden) {
@@ -131,17 +133,16 @@ QColor PluginListView::markerColor(const QModelIndex& index) const
       return QColor();
     }
 
-    int r = 0, g = 0, b = 0, a = 0;
+    unsigned int r = 0, g = 0, b = 0, a = 0;
     for (const auto& color : colors) {
-      r += color.red();
-      g += color.green();
-      b += color.blue();
-      a += color.alpha();
+      r += static_cast<unsigned int>(color.red());
+      g += static_cast<unsigned int>(color.green());
+      b += static_cast<unsigned int>(color.blue());
+      a += static_cast<unsigned int>(color.alpha());
     }
-
-    return QColor(
-        static_cast<int>(r / colors.size()), static_cast<int>(g / colors.size()),
-        static_cast<int>(b / colors.size()), static_cast<int>(a / colors.size()));
+    const auto n = static_cast<unsigned int>(colors.size());
+    return QColor(static_cast<int>(r / n), static_cast<int>(g / n),
+                  static_cast<int>(b / n), static_cast<int>(a / n));
   }
 
   return QColor();
@@ -279,8 +280,8 @@ bool PluginListView::event(QEvent* event)
 
 void PluginListView::dragMoveEvent(QDragMoveEvent* event)
 {
-  // HACK: dropping below an expanded item sends the same event as dropping below its
-  // children, so set an additional flag to signal this
+
+
   if (const auto m = qobject_cast<PluginGroupProxyModel*>(model())) {
     m->setDroppingBelowExpandedItem(dropIndicatorPosition() ==
                                         QAbstractItemView::BelowItem &&

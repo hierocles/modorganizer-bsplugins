@@ -41,6 +41,7 @@ public:
     COL_PRIORITY,
     COL_MODINDEX,
     COL_NOTES,
+    COL_RECORDS,
 
     COL_COUNT
   };
@@ -83,33 +84,33 @@ public slots:
   void
   changePluginStates(const std::map<QString, MOBase::IPluginList::PluginStates>& infos);
 
-  // enable/disable all plugins
-  //
+
+
   void setEnabledAll(bool enabled);
 
-  // enable/disable plugins at the given indices.
-  //
+
+
   void setEnabled(const QModelIndexList& indices, bool enabled);
 
-  // send plugins to the given priority
-  //
+
+
   void sendToPriority(const QModelIndexList& indices, int priority,
                       bool disjoint = false);
 
-  // shift the priority of mods at the given indices by the given offset
-  //
+
+
   void shiftPluginsPriority(const QModelIndexList& indices, int offset);
 
-  // toggle the active state of mods at the given indices
-  //
+
+
   void toggleState(const QModelIndexList& indices);
 
-  // lock/unlock plugins in the load order
-  //
+
+
   void lockPlugins(const QModelIndexList& indices, bool locked);
 
-  // assign plugins to a group
-  //
+
+
   void setGroup(const QModelIndexList& indices, const QString& group);
   void renameGroup(const QString& oldGroup, const QString& newGroup);
   void removeGroup(const QString& group);
@@ -117,8 +118,8 @@ public slots:
   void resetGroupsStructure();
   void cleanEmptyGroups();
 
-  // send plugins to the bottom of a group
-  //
+
+
   void sendToGroup(const QModelIndexList& indices, const QString& group, bool isESM);
 
 signals:

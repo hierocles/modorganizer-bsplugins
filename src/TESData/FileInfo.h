@@ -76,10 +76,10 @@ public:
 
   struct State
   {
-    bool enabled;
-    int priority = -1;
+    bool enabled     = false;
+    int priority     = -1;
     QString index;
-    int loadOrder;
+    int loadOrder    = -1;
     QString group;
     QString notes;
     bool lockedOrder = false;

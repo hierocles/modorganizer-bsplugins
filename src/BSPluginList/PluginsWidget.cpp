@@ -20,9 +20,12 @@
 #include <QInputDialog>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QScrollBar>
 #include <QShortcut>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QToolTip>
 
 using namespace Qt::Literals::StringLiterals;
 
@@ -89,8 +92,10 @@ PluginsWidget::PluginsWidget(MOBase::IOrganizer* organizer,
     m_PluginListModel->cleanEmptyGroups();
   }
 
-  // monitor main window for close event
+
   topLevelWidget()->installEventFilter(this);
+  ui->activePluginsCounter->installEventFilter(this);
+  ui->activePluginsCounter->setCursor(Qt::PointingHandCursor);
 
   restoreState();
 
@@ -113,15 +118,16 @@ PluginsWidget::PluginsWidget(MOBase::IOrganizer* organizer,
               return;
             }
 
-            // Persist notes and other data when cells are edited
+
             m_PluginList->writePluginLists();
           });
 
   connect(m_GroupProxy, &QAbstractItemModel::modelReset, [this]() {
-    ui->pluginList->scrollToTop();
     if (Settings::instance()->enablePluginGrouping()) {
       Settings::instance()->restoreTreeExpandState(ui->pluginList);
     }
+
+    QTimer::singleShot(0, this, [this]() { restoreScrollPosition(); });
   });
 
   connect(ui->pluginList, &QTreeView::collapsed, this,
@@ -168,13 +174,15 @@ void PluginsWidget::updatePluginCount()
   int overlayCount           = 0;
   int regularCount           = 0;
   int activeVisibleCount     = 0;
+  int conflictCount          = 0;
 
     const auto gameFeatures = m_Organizer->gameFeatures();
     const auto tesSupport = gameFeatures ? gameFeatures->gameFeature<MOBase::GamePlugins>() : nullptr;
 
   const bool lightPluginsAreSupported =
       tesSupport && tesSupport->lightPluginsAreSupported();
-    const bool overridePluginsAreSupported = false;
+  const bool conflictManagementEnabled =
+      Settings::instance()->enablePluginConflictManagement();
 
   for (int i = 0, count = m_PluginListModel->rowCount(); i < count; ++i) {
     const auto index = m_PluginListModel->index(i, 0);
@@ -186,6 +194,9 @@ void PluginsWidget::updatePluginCount()
 
     const bool active  = info->enabled() || info->isAlwaysEnabled();
     const bool visible = m_SortProxy->filterAcceptsRow(index.row(), index.parent());
+    if (conflictManagementEnabled &&
+        info->conflictState() != TESData::FileInfo::CONFLICT_NONE)
+      ++conflictCount;
     if (info->isSmallFile()) {
       ++lightMasterCount;
       activeLightMasterCount += active ? 1 : 0;
@@ -229,8 +240,10 @@ void PluginsWidget::updatePluginCount()
                  .arg(masterCount + regularCount);
   if (lightPluginsAreSupported)
     toolTip += row.arg(tr("ESLs")).arg(activeLightMasterCount).arg(lightMasterCount);
-  if (overridePluginsAreSupported)
-    toolTip += row.arg(tr("Overlay")).arg(activeOverlayCount).arg(overlayCount);
+  if (Settings::instance()->enablePluginConflictManagement() && conflictCount > 0)
+    toolTip +=
+        uR"(<tr><td>%1:</td><td align=right colspan=2>%2</td></tr>)"_s.arg(
+            tr("Conflicting plugins"), QString::number(conflictCount));
   toolTip += uR"(</table>)"_s;
 
   ui->activePluginsCounter->setToolTip(toolTip);
@@ -252,6 +265,18 @@ void PluginsWidget::on_espFilterEdit_textChanged(const QString& filter)
 
 bool PluginsWidget::eventFilter(QObject* watched, QEvent* event)
 {
+  if (watched == ui->activePluginsCounter &&
+      event->type() == QEvent::MouseButtonRelease) {
+    auto* const mouseEvent = static_cast<QMouseEvent*>(event);
+    if (mouseEvent->button() == Qt::LeftButton) {
+      QToolTip::showText(ui->activePluginsCounter->mapToGlobal(
+                             mouseEvent->position().toPoint()),
+                         ui->activePluginsCounter->toolTip(),
+                         ui->activePluginsCounter);
+      return true;
+    }
+  }
+
   if (event->type() == QEvent::Close) {
     saveState();
     m_PluginList->writePluginLists();
@@ -324,12 +349,9 @@ void PluginsWidget::onPanelActivated()
   if (m_DeferPostLootRefresh) {
     m_DeferPostLootRefresh = false;
     QTimer::singleShot(1000, this, [this]() {
-      m_PluginListModel->refresh();
+      refreshPluginListPreservingScroll();
     });
-    return;
   }
-
-  m_PluginListModel->refresh();
 }
 
 void PluginsWidget::onSelectedOriginsChanged(const QList<QString>& origins)
@@ -434,34 +456,37 @@ void PluginsWidget::on_pluginList_customContextMenuRequested(const QPoint& pos)
 void PluginsWidget::on_pluginList_doubleClicked(const QModelIndex& index)
 {
   const int column = index.column();
-  
-  // Allow double-click to edit Notes column
+
+
   if (column == PluginListModel::COL_NOTES) {
     ui->pluginList->edit(index);
     return;
   }
-  
+
   bool ok;
   const int id = index.data(PluginListModel::IndexRole).toInt(&ok);
   if (ok) {
     Qt::KeyboardModifiers modifiers = QApplication::queryKeyboardModifiers();
     if (modifiers.testFlag(Qt::ControlModifier)) {
-      // Ctrl+Double-clic: explore origin folder
+
       const auto origin  = m_PluginList->getOriginName(id);
       const auto modInfo = m_Organizer->modList()->getMod(origin);
 
       if (modInfo) {
         MOBase::shell::Explore(modInfo->absolutePath());
       }
+    } else if (Settings::instance()->doubleClickOpensPluginInfo()) {
+
+      displayPluginInformation(index);
     } else {
-      // Double-clic normal sur un plugin: open mod information
+
       const auto plugin = m_PluginList->getPlugin(id);
       if (plugin) {
         m_PanelInterface->displayOriginInformation(plugin->name());
       }
     }
   } else if (ui->pluginList->model()->hasChildren(index)) {
-    // Double-clic sur un groupe: développe/réduit
+
     ui->pluginList->setExpanded(index, !ui->pluginList->isExpanded(index));
   }
 }
@@ -503,12 +528,12 @@ void PluginsWidget::on_sortButton_clicked()
     return;
   }
 
-  // don't try to update the master list in offline mode
+
   const bool didUpdateMasterList = offline ? true : m_DidUpdateMasterList;
 
   if (MOTools::runLoot(topLevelWidget(), m_Organizer, m_PluginList, logLevel,
                        didUpdateMasterList, *Settings::instance())) {
-    // don't assume the master list was updated in offline mode
+
     if (!offline) {
       m_DidUpdateMasterList = true;
     }
@@ -677,6 +702,7 @@ QMenu* PluginsWidget::listOptionsMenu()
 void PluginsWidget::saveState()
 {
   auto* const settings = Settings::instance();
+  saveScrollPosition();
   settings->saveState(ui->pluginList->header());
   if (settings->enablePluginGrouping()) {
     settings->saveTreeExpandState(ui->pluginList);
@@ -702,6 +728,42 @@ void PluginsWidget::restoreState()
   toggleIgnoreMasterConflicts();
 
   applyConflictManagementSetting();
+
+  QTimer::singleShot(0, this, [this]() { restoreScrollPosition(); });
+}
+
+void PluginsWidget::saveScrollPosition() const
+{
+  if (const auto* const scrollBar = ui->pluginList->verticalScrollBar()) {
+    Settings::instance()->set("plugin_list_scroll", scrollBar->value());
+  }
+}
+
+void PluginsWidget::restoreScrollPosition()
+{
+  auto* const scrollBar = ui->pluginList->verticalScrollBar();
+  if (!scrollBar) {
+    m_PendingScrollPosition = -1;
+    return;
+  }
+
+  const int persisted =
+      Settings::instance()->get<int>("plugin_list_scroll", scrollBar->value());
+  const int target = m_PendingScrollPosition >= 0 ? m_PendingScrollPosition : persisted;
+  scrollBar->setValue(target);
+  m_PendingScrollPosition = -1;
+}
+
+void PluginsWidget::refreshPluginListPreservingScroll()
+{
+  if (const auto* const scrollBar = ui->pluginList->verticalScrollBar()) {
+    m_PendingScrollPosition = scrollBar->value();
+  } else {
+    m_PendingScrollPosition = -1;
+  }
+
+  saveScrollPosition();
+  m_PluginListModel->refresh();
 }
 
 static bool containsPlugin(const MOBase::IModInterface* mod)
@@ -723,8 +785,8 @@ static bool containsPlugin(const MOBase::IModInterface* mod)
 void PluginsWidget::onModStateChanged(
     const std::map<QString, MOBase::IModList::ModStates>& mods)
 {
-  // HACK: the virtual file tree won't update until the next refresh, so keep track of
-  // any mods that might be newly activated
+
+
   const auto modList = m_Organizer->modList();
   if (!modList)
     return;
@@ -735,7 +797,7 @@ void PluginsWidget::onModStateChanged(
       m_PluginList->notifyPendingState(modName, modState);
     }
   }
-  m_PluginListModel->refresh();
+  refreshPluginListPreservingScroll();
 }
 
 bool PluginsWidget::onAboutToRun([[maybe_unused]] const QString& binary)
@@ -762,7 +824,7 @@ bool PluginsWidget::onAboutToRun([[maybe_unused]] const QString& binary)
     MOBase::shellDeleteQuiet(lockedOrderName + ".snapshot", parent);
   }
 
-  if (QFileInfo(binary).fileName().compare("lootcli.exe") != 0) {
+  if (QFileInfo(binary).fileName().compare("lootcli.exe", Qt::CaseInsensitive) != 0) {
     createBackup(pluginsName, "snapshot", parent);
     createBackup(loadOrderName, "snapshot", parent);
     createBackup(lockedOrderName, "snapshot", parent);
@@ -803,10 +865,10 @@ void PluginsWidget::onFinishedRun(const QString& binary,
     return;
   }
 
-  // queue up behind the vanilla callbacks which might not have run yet, so we can react
-  // after loadorder.txt changes
+
+
   m_Organizer->onNextRefresh([=, this]() {
-    m_PluginList->refresh();
+    m_PluginListModel->refresh();
     checkLoadOrderChanged(binaryName);
 
     m_IsRunningApp          = false;
@@ -1017,15 +1079,15 @@ void PluginsWidget::checkLoadOrderChanged(const QString& binaryName)
   if (!QFileInfo(loadOrderSnapshot).exists())
     return;
 
-  // we just refreshed and rewrote loadorder.txt if plugins.txt changed
+
   const bool enableWarning    = Settings::instance()->externalChangeWarning();
   const bool loadOrderChanged = m_ExternalStatesChanged ||
                                 hashFile(loadOrderName) != hashFile(loadOrderSnapshot);
 
   if (loadOrderChanged) {
     if (binaryName.compare("Loot.exe", Qt::CaseInsensitive) != 0) {
-      // When warning is enabled, ask the user whether to keep game changes.
-      // When warning is disabled, always silently restore the snapshot.
+
+
       bool shouldRestore = true;
       if (enableWarning) {
         const auto answer = QMessageBox::question(
@@ -1088,9 +1150,14 @@ void PluginsWidget::synchronizePluginLists(MOBase::IOrganizer* organizer)
     m_OrganizerRefreshing = true;
     m_PluginList->flushPendingStates();
 
-    // Always invalidate on organizer refresh. If a run-finished callback was missed
-    // (e.g. freeze/CTD edge cases), m_IsRunningApp can stay true and previously blocked
-    // updates indefinitely, causing stale priorities/groups in the view.
+
+
+    if (const auto* const sb = ui->pluginList->verticalScrollBar())
+      m_PendingScrollPosition = sb->value();
+
+
+
+
     m_PluginListModel->invalidate();
   };
 
@@ -1128,7 +1195,7 @@ void PluginsWidget::synchronizePluginLists(MOBase::IOrganizer* organizer)
 
   m_PluginList->onPluginStateChanged(
       [=, this](const std::map<QString, MOBase::IPluginList::PluginStates>& infos) {
-        if (m_IsRunningApp) {
+        if (m_IsRunningApp && !m_PluginList->isRefreshing() && !infos.empty()) {
           m_ExternalStatesChanged = true;
         }
 

@@ -9,7 +9,7 @@ Settings* Instance = nullptr;
 
 static QString findIniPath(MOBase::IOrganizer* organizer)
 {
-  // FIXME: we can't find non-portable instance paths
+
   return QDir(organizer->basePath()).filePath("ModOrganizer.ini");
 }
 
@@ -99,7 +99,8 @@ bool Settings::externalChangeWarning() const
 
 bool Settings::enableSortButton() const
 {
-  return Organizer->pluginSetting(BSPlugins::NAME, "enable_sort_button").value<bool>();
+  const auto v = Organizer->pluginSetting(BSPlugins::NAME, "enable_sort_button");
+  return !v.isValid() || v.value<bool>();
 }
 
 bool Settings::enablePluginGrouping() const
@@ -135,6 +136,12 @@ bool Settings::enablePluginRedundantConflicts() const
              .value<bool>();
 }
 
+bool Settings::enableTypefaceIndicators() const
+{
+  return Organizer->pluginSetting(BSPlugins::NAME, "enable_typeface_indicators")
+      .value<bool>();
+}
+
 bool Settings::confirmMassOperations() const
 {
   return Organizer->pluginSetting(BSPlugins::NAME, "confirm_mass_operations")
@@ -161,6 +168,18 @@ bool Settings::lootShowMessages() const
 bool Settings::lootShowProblems() const
 {
   return Organizer->pluginSetting(BSPlugins::NAME, "loot_show_problems").value<bool>();
+}
+
+bool Settings::doubleClickOpensPluginInfo() const
+{
+  return Organizer->pluginSetting(BSPlugins::NAME, "double_click_opens_plugin_info")
+      .value<bool>();
+}
+
+bool Settings::enableCellConflictDetection() const
+{
+  return Organizer->pluginSetting(BSPlugins::NAME, "enable_cell_conflict_detection")
+      .value<bool>();
 }
 
 static QString stateSettingName(const QHeaderView* header)
@@ -196,7 +215,7 @@ void Settings::saveTreeExpandState(const QTreeView* view)
 
 void Settings::restoreTreeExpandState(QTreeView* view) const
 {
-  // empty is serialized as invalid
+
   const QVariant state = Organizer->persistent(
       BSPlugins::NAME, view->objectName() + "_expanded", QVariantList());
 

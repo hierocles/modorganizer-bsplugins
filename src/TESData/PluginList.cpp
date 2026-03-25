@@ -65,7 +65,10 @@ int PluginList::getIndex(const QString& pluginName) const
 
 int PluginList::getIndexAtPriority(int priority) const
 {
-  return m_PluginsByPriority.at(priority);
+  if (priority < 0 || priority >= static_cast<int>(m_PluginsByPriority.size())) {
+    return -1;
+  }
+  return m_PluginsByPriority[priority];
 }
 
 QString PluginList::getOriginName(int index) const
@@ -206,44 +209,33 @@ void PluginList::addGroupPlaceholder(const std::string& pluginName,
 #pragma endregion Record Access
 #pragma region List Management
 
+static QString profileFilePath(const MOBase::IOrganizer* organizer,
+                               const QString& fileName)
+{
+  const QString base = organizer->profilePath();
+  if (base.isEmpty())
+    return QString();
+  return QDir::cleanPath(QDir(base).absoluteFilePath(fileName));
+}
+
 QString PluginList::groupsPath() const
 {
-  const auto profilePath = QDir(m_Organizer->profilePath());
-  if (profilePath.isEmpty()) {
-    return QString();
-  }
-
-  return QDir::cleanPath(profilePath.absoluteFilePath(u"plugingroups.txt"_s));
+  return profileFilePath(m_Organizer, u"plugingroups.txt"_s);
 }
 
 QString PluginList::lockedOrderPath() const
 {
-  const auto profilePath = QDir(m_Organizer->profilePath());
-  if (profilePath.isEmpty()) {
-    return QString();
-  }
-
-  return QDir::cleanPath(profilePath.absoluteFilePath(u"lockedorder.txt"_s));
+  return profileFilePath(m_Organizer, u"lockedorder.txt"_s);
 }
 
 QString PluginList::notesPath() const
 {
-  const auto profilePath = QDir(m_Organizer->profilePath());
-  if (profilePath.isEmpty()) {
-    return QString();
-  }
-
-  return QDir::cleanPath(profilePath.absoluteFilePath(u"pluginnotes.txt"_s));
+  return profileFilePath(m_Organizer, u"pluginnotes.txt"_s);
 }
 
 QString PluginList::ignoredRecordsPath() const
 {
-  const auto profilePath = QDir(m_Organizer->profilePath());
-  if (profilePath.isEmpty()) {
-    return QString();
-  }
-
-  return QDir::cleanPath(profilePath.absoluteFilePath(u"pluginignoredrecords.txt"_s));
+  return profileFilePath(m_Organizer, u"pluginignoredrecords.txt"_s);
 }
 
 void PluginList::refresh(bool invalidate)
@@ -1061,7 +1053,7 @@ static bool isAssociatedArchive(TESData::FileInfo& info, const QString& candidat
                                 Game game)
 {
   const QString baseName = QFileInfo(info.name()).completeBaseName();
-  if (!candidate.startsWith(baseName)) {
+  if (!candidate.startsWith(baseName, Qt::CaseInsensitive)) {
     return false;
   }
 
@@ -1213,7 +1205,9 @@ void PluginList::scanDataFiles(bool invalidate)
     }
   }
 
-  const uint concurrency = std::max(1U, std::thread::hardware_concurrency() / 2);
+
+
+  const uint concurrency = std::max(2U, std::thread::hardware_concurrency());
   std::counting_semaphore smph{concurrency};
 
   std::vector<std::shared_future<void>> futures;
@@ -1512,7 +1506,10 @@ void PluginList::readNotes(const QString& fileName)
     }
 
     const QString pluginName = line.left(pipePos);
-    const QString note = line.mid(pipePos + 1);
+
+    QString note = line.mid(pipePos + 1);
+    note.replace(QStringLiteral("\\n"), QStringLiteral("\n"));
+    note.replace(QStringLiteral("\\\\"), QStringLiteral("\\"));
 
     if (const auto it = m_PluginsByName.find(pluginName); it != m_PluginsByName.end()) {
       m_Plugins.at(it->second)->setNotes(note);
@@ -1531,9 +1528,13 @@ void PluginList::writeNotes(const QString& fileName) const
 
   for (const auto& [name, i] : m_PluginsByName) {
     const auto& plugin = m_Plugins.at(i);
-    const auto& note = plugin->notes();
-    if (!note.isEmpty()) {
-      file->write(u"%1|%2\r\n"_s.arg(name).arg(note).toUtf8());
+    if (!plugin->notes().isEmpty()) {
+
+
+      QString escaped = plugin->notes();
+      escaped.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+      escaped.replace(QLatin1Char('\n'), QStringLiteral("\\n"));
+      file->write(u"%1|%2\r\n"_s.arg(name).arg(escaped).toUtf8());
     }
   }
 

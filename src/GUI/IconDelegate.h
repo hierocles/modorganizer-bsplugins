@@ -23,8 +23,8 @@ public:
                  const QModelIndex& index) const override;
 
 protected:
-  // check if icons should be compacted or not
-  //
+
+
   [[nodiscard]] bool compact() const { return m_Compact; }
 
   static void paintIcons(QPainter* painter, const QStyleOptionViewItem& option,

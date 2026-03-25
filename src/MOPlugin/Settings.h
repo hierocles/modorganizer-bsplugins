@@ -57,11 +57,14 @@ public:
   [[nodiscard]] bool enableCleanGroupsButton() const;
   [[nodiscard]] bool enablePluginConflictManagement() const;
   [[nodiscard]] bool enablePluginRedundantConflicts() const;
+  [[nodiscard]] bool enableTypefaceIndicators() const;
   [[nodiscard]] bool confirmMassOperations() const;
   [[nodiscard]] bool autoCleanGroupSeparatorsOnStartup() const;
   [[nodiscard]] bool lootShowDirty() const;
   [[nodiscard]] bool lootShowMessages() const;
   [[nodiscard]] bool lootShowProblems() const;
+  [[nodiscard]] bool doubleClickOpensPluginInfo() const;
+  [[nodiscard]] bool enableCellConflictDetection() const;
 
   void saveTreeExpandState(const QTreeView* view);
   void restoreTreeExpandState(QTreeView* view) const;
@@ -75,7 +78,7 @@ public:
   void saveState(const MOBase::ExpanderWidget* expander) override;
   void restoreState(MOBase::ExpanderWidget* expander) const override;
 
-  // IGeometrySettings<QDialog>
+
 
   void saveGeometry(const QDialog* dialog) override;
   void restoreGeometry(QDialog* dialog) const override;

@@ -11,6 +11,19 @@ FileEntry::FileEntry(TESFileHandle handle, const std::string& name)
     : m_Handle{handle}, m_Name{name}, m_Root{std::make_shared<TreeItem>()}
 {}
 
+int FileEntry::recordCount() const
+{
+
+
+
+  if (!m_CachedRecordCount.has_value()) {
+    int count = 0;
+    forEachRecord([&count](const auto&) { ++count; });
+    m_CachedRecordCount = count;
+  }
+  return *m_CachedRecordCount;
+}
+
 void FileEntry::forEachRecord(
     std::function<void(const std::shared_ptr<const Record>&)> func) const
 {
@@ -83,7 +96,7 @@ void FileEntry::addChildGroup(const RecordPath& path)
 {
   const auto item = findItem(path);
   if (!item || !item->record) {
-    // no record to add children to
+
     return;
   }
 

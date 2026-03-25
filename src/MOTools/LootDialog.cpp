@@ -107,8 +107,8 @@ void LootDialog::setText(const QString& s)
 
 void LootDialog::setProgress(lootcli::Progress p)
 {
-  // don't overwrite the "stopping loot" message even if lootcli generates a new
-  // progress message
+
+
   if (!m_Cancelling) {
     setText(progressToString(p));
   }
@@ -172,7 +172,7 @@ int LootDialog::exec()
 
 void LootDialog::accept()
 {
-  // no-op
+
 }
 
 void LootDialog::reject()
@@ -264,8 +264,8 @@ void LootDialog::onFinished()
     ui->openJsonReport->setEnabled(true);
     ui->buttons->setStandardButtons(QDialogButtonBox::Close);
 
-    // if loot failed, the Done progress won't be received; this makes sure
-    // the progress bar is stopped
+
+
     setProgress(lootcli::Progress::Done);
   }
 }

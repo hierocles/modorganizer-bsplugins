@@ -14,7 +14,7 @@ public:
 
   BSPlugins() = default;
 
-  // IPlugin
+
 
   QString name() const override;
   std::vector<std::shared_ptr<const MOBase::IPluginRequirement>>
@@ -25,7 +25,7 @@ public:
   QList<MOBase::PluginSetting> settings() const override;
   bool enabledByDefault() const override;
 
-  // IPluginPanel
+
 
   bool initPlugin(MOBase::IOrganizer* organizer);
   QWidget* createWidget(IPanelInterface* panelInterface, QWidget* parent) override;

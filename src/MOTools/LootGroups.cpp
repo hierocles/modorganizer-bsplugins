@@ -103,7 +103,7 @@ static void writeGroups(const QString& plugingroups, std::map<QString, QString>&
       }
     }
 
-    // Ensure the read handle is released before creating the safe-write file.
+
     existingFile.close();
   }
 

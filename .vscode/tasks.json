@@ -12,6 +12,21 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Build bsplugins Release",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"vsbuild",
+				"--config",
+				"Release",
+				"--target",
+				"bsplugins"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

@@ -1,4 +1,5 @@
 #include "FileConflictParser.h"
+#include "MOPlugin/Settings.h"
 #include "PluginList.h"
 
 #include <log.h>
@@ -20,10 +21,17 @@ FileConflictParser::FileConflictParser(PluginList* pluginList, FileInfo* plugin,
 bool FileConflictParser::Group(TESFile::GroupData group)
 {
   if (group.hasDirectParent()) {
+
+
+
+    if (!Settings::instance()->enableCellConflictDetection()) {
+      return false;
+    }
     m_CurrentPath.push(group, m_Masters, m_PluginName);
     m_PluginList->addGroupPlaceholder(m_PluginName, m_CurrentPath);
-    m_CurrentPath.pop();
-    return false;
+
+
+    return true;
   }
 
   if (m_Masters.empty() && group.hasFormType() && group.formType() != "GMST"_ts &&
@@ -70,9 +78,9 @@ bool FileConflictParser::Form(TESFile::FormData form)
   default:
     m_CurrentPath.setFormId(form.formId(), m_Masters, m_PluginName);
 
-    // Parse all records (not only master records) so the conflict graph also
-    // includes plugin-owned records with no alternatives. This avoids marking a
-    // plugin as "totally overridden" when it still has unique records.
+
+
+
     return true;
   }
 }

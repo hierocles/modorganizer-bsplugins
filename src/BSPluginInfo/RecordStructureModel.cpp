@@ -151,7 +151,7 @@ QVariant RecordStructureModel::headerData(int section, Qt::Orientation orientati
   switch (role) {
   case Qt::DisplayRole: {
     if (section == 0) {
-      // Name
+
       return QVariant();
     }
 

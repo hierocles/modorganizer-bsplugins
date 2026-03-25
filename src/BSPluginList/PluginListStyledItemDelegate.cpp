@@ -62,8 +62,8 @@ void PluginListStyledItemDelegate::paint(QPainter* painter,
                          opt.palette.brush(QPalette::Disabled, QPalette::Text));
   }
 
-  // HACK: we can't normally have a disabled checkbox on a selectable row, so create a
-  // margin for it and then draw one manually
+
+
   bool drawCheck = false;
   bool enabled   = false;
   if (index.column() == 0 && !index.data(Qt::CheckStateRole).isValid()) {
@@ -74,14 +74,14 @@ void PluginListStyledItemDelegate::paint(QPainter* painter,
       }
     }
 
-    // set decoration size to use as text margin
+
     opt.decorationSize.setWidth(
         style->pixelMetric(QStyle::PM_IndicatorWidth, &opt, widget));
   }
 
   QStyledItemDelegate::paint(painter, opt, index);
 
-  // draw check on top
+
   if (drawCheck) {
     opt.features |= QStyleOptionViewItem::HasCheckIndicator;
 
@@ -104,7 +104,7 @@ void PluginListStyledItemDelegate::initStyleOption(QStyleOptionViewItem* option,
   const auto backgroundColor = option->backgroundBrush.color();
   QStyledItemDelegate::initStyleOption(option, index);
 
-  // HACK: create a text margin where the checkbox should be
+
   if (index.column() == 0 && !index.data(Qt::CheckStateRole).isValid()) {
     if (index.data(PluginListModel::InfoRole).isValid()) {
       option->features |= QStyleOptionViewItem::HasDecoration;

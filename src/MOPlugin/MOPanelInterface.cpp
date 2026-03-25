@@ -61,7 +61,7 @@ void MOPanelInterface::setSelectedFiles(const QList<QString>& selectedFiles)
                                              QItemSelectionModel::ClearAndSelect);
 }
 
-// FIXME: only works for files in the plugins panel
+
 void MOPanelInterface::displayOriginInformation(const QString& file)
 {
   const auto model = m_PluginListView->model();

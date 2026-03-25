@@ -21,8 +21,8 @@ public:
   ListDialog(IGeometrySettings<QDialog>& settings, QWidget* parent = nullptr);
   ~ListDialog() noexcept;
 
-  // also saves and restores geometry
-  //
+
+
   int exec() override;
 
   void setChoices(QStringList choices);

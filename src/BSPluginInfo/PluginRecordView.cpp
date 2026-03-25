@@ -18,7 +18,7 @@ PluginRecordView::PluginRecordView(QWidget* parent)
 
   MOBase::setCustomizableColumns(ui->pickRecordView);
 
-  // fix issue where view scrolls after moving headers
+
   ui->recordStructureView->header()->setAutoScroll(false);
 
   ui->conflictFilterRow->hide();
@@ -206,7 +206,7 @@ void PluginRecordView::on_pickRecordView_customContextMenuRequested(const QPoint
       }
     }
 
-    // Persist ignored records so refresh does not lose the tag.
+
     m_PluginList->writePluginLists();
   });
 

@@ -140,8 +140,8 @@ FileInfo::Conflicts FileInfo::doConflictCheck() const
                     &recordHasWinningConflict, &recordHasLosingConflict);
     }
 
-    // A plugin is redundant if all of its non-ignored records are overridden by
-    // a higher-priority plugin (mirrors MO2 white lightning behavior).
+
+
     if (!recordHasLosingConflict) {
       allRecordsLosing = false;
     }
@@ -176,9 +176,9 @@ FileInfo::Conflicts FileInfo::doConflictCheck() const
       !conflicts.m_OverridingList.empty() ||
       !conflicts.m_OverwritingArchiveList.empty();
 
-    // Be conservative to avoid false positives:
-    // only mark redundant when every checked record is losing AND the plugin has
-    // no winning conflicts at all.
+
+
+
     if (Settings::instance()->enablePluginRedundantConflicts() &&
       checkedRecords > 0 && allRecordsLosing && hasAnyLosingConflict &&
       !hasAnyWinningConflict) {

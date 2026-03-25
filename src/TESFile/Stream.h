@@ -86,9 +86,9 @@ struct RecordFlags
   {
     Master    = 0x1,
     Localized = 0x80,
-    LightNew  = 0x100,  // Starfield ESL flag
-    LightOld  = 0x200,  // SSE/F4 ESL flag
-    Overlay   = 0x200,  // Starfield ESQ flag
+    LightNew  = 0x100,
+    LightOld  = 0x200,
+    Overlay   = 0x200,
   };
 
   enum Flag : std::uint32_t

@@ -176,4 +176,4 @@ void requireObject(const Value& v, const char* what)
 
 }  // namespace json
 
-#endif  // MODORGANIZER_JSON_INCLUDED
+#endif

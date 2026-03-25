@@ -8,6 +8,8 @@
 #include <boost/container/flat_map.hpp>
 
 #include <QAbstractProxyModel>
+#include <QColor>
+#include <QHash>
 
 #include <limits>
 #include <memory>
@@ -52,6 +54,9 @@ public:
                     const QModelIndex& parent) override;
 
   void setDroppingBelowExpandedItem(bool value) { m_DroppingBelowExpandedItem = value; }
+
+  void setGroupColor(const QString& groupName, const QColor& color);
+  [[nodiscard]] QColor groupColor(const QString& groupName) const;
 
 signals:
   void groupRenameRequested(const QModelIndex& index, const QString& name);
@@ -110,6 +115,7 @@ private:
   bool m_DroppingBelowExpandedItem;
   mutable std::vector<std::size_t> m_DraggingGroups;
 
+  mutable QHash<QString, QColor> m_GroupColors;
   MOBase::IOrganizer* m_Organizer;
 };
 

@@ -99,7 +99,7 @@ public:
   void notifyPendingState(const QString& mod, MOBase::IModList::ModStates state);
   void flushPendingStates();
 
-  // IPluginList
+
 
   [[nodiscard]] QStringList pluginNames() const override;
   [[nodiscard]] PluginStates state(const QString& name) const override;
@@ -131,7 +131,7 @@ public:
   [[nodiscard]] QString author(const QString& name) const;
   [[nodiscard]] QString description(const QString& name) const;
 
-  // ILootCache
+
 
   void clearAdditionalInformation() override;
   void addLootReport(const QString& name, MOTools::Loot::Plugin plugin) override;

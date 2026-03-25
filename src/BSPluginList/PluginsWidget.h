@@ -69,6 +69,9 @@ private:
   void updateGroupActionVisibility();
   void applyGroupingSetting();
   void applyConflictManagementSetting();
+  void saveScrollPosition() const;
+  void restoreScrollPosition();
+  void refreshPluginListPreservingScroll();
   [[nodiscard]] bool selectedSingleGroup(QString* groupName = nullptr) const;
   void renameSelectedGroup();
   void removeSelectedGroup();
@@ -86,7 +89,7 @@ private:
   void importLootGroups();
   [[nodiscard]] bool confirmMassOperation(const QString& text) const;
 
-  // HACK: Attempt to keep our custom plugin list synchronized with the built-in panel
+
   void synchronizePluginLists(MOBase::IOrganizer* organizer);
 
   Ui_PluginsWidget* ui;
@@ -110,6 +113,7 @@ private:
   bool m_IsRunningApp          = false;
   bool m_DeferPostLootRefresh  = false;
   bool m_ExternalStatesChanged = false;
+  int m_PendingScrollPosition  = -1;
   QMetaObject::Connection m_ViewSelectionChangedConnection;
 };
 

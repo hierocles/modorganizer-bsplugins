@@ -18,8 +18,8 @@ public:
 protected:
   void paintEvent(QPaintEvent* event) override;
 
-  // retrieve the color of the marker for the given index
-  //
+
+
   [[nodiscard]] virtual QColor color(const QModelIndex& index) const;
 
 protected:

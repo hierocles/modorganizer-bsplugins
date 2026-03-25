@@ -31,7 +31,7 @@ static QModelIndexList visibleIndex(QTreeView* view, int column)
 ViewMarkingScrollBar::ViewMarkingScrollBar(QTreeView* view, int role)
     : QScrollBar(view), m_View{view}, m_Role{role}
 {
-  // not implemented for horizontal sliders
+
   Q_ASSERT(this->orientation() == Qt::Vertical);
 }
 
