@@ -70,6 +70,9 @@ public:
     bool isBlueprintFlagged;
     bool hasNoRecords;
 
+    int formVersion;
+    float headerVersion;
+
     QStringList masters;
     mutable boost::container::flat_set<QString, MOBase::FileNameComparator> masterUnset;
   };
@@ -132,6 +135,10 @@ public:
   void setBlueprintFlagged(bool value) { m_Metadata.isBlueprintFlagged = value; }
   [[nodiscard]] bool hasNoRecords() const { return m_Metadata.hasNoRecords; }
   void setHasNoRecords(bool value) { m_Metadata.hasNoRecords = value; }
+  [[nodiscard]] int formVersion() const { return m_Metadata.formVersion; }
+  void setFormVersion(int value) { m_Metadata.formVersion = value; }
+  [[nodiscard]] float headerVersion() const { return m_Metadata.headerVersion; }
+  void setHeaderVersion(float value) { m_Metadata.headerVersion = value; }
 
   [[nodiscard]] const auto& masters() const { return m_Metadata.masters; }
   void addMaster(const QString& master) { m_Metadata.masters.push_back(master); }

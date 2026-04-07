@@ -582,20 +582,28 @@ void PluginsWidget::restoreState()
   toggleIgnoreMasterConflicts();
 }
 
-static bool containsPlugin(const MOBase::IModInterface* mod)
+static bool containsPlugin(const MOBase::IModInterface* mod, const MOBase::IPluginGame* game)
 {
   const auto fileTree = mod ? mod->fileTree() : nullptr;
   if (!fileTree)
     return false;
-
-  return std::ranges::any_of(*fileTree, [&](auto&& entry) {
-    if (!entry)
-      return false;
-    const QString filename = entry->name();
-    return filename.endsWith(u".esp"_s, Qt::CaseInsensitive) ||
-           filename.endsWith(u".esm"_s, Qt::CaseInsensitive) ||
-           filename.endsWith(u".esl"_s, Qt::CaseInsensitive);
-  });
+  std::shared_ptr<const MOBase::IFileTree> searchDir;
+  if (!game->modDataDirectory().isEmpty()) {
+    searchDir = fileTree->findDirectory(game->modDataDirectory());
+  } else {
+    searchDir = fileTree;
+  }
+  if (searchDir) {
+    return std::ranges::any_of(*searchDir, [&](auto&& entry) {
+      if (!entry)
+        return false;
+      const QString filename = entry->name();
+      return filename.endsWith(u".esp"_s, Qt::CaseInsensitive) ||
+             filename.endsWith(u".esm"_s, Qt::CaseInsensitive) ||
+             filename.endsWith(u".esl"_s, Qt::CaseInsensitive);
+    });
+  }
+  return false;
 }
 
 void PluginsWidget::onModStateChanged(
@@ -609,7 +617,7 @@ void PluginsWidget::onModStateChanged(
 
   for (const auto& [modName, modState] : mods) {
     const auto mod = modList->getMod(modName);
-    if (containsPlugin(mod)) {
+    if (containsPlugin(mod, m_Organizer->managedGame())) {
       m_PluginList->notifyPendingState(modName, modState);
     }
   }

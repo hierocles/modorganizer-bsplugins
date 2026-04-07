@@ -246,8 +246,8 @@ private:
 class FormData final
 {
 public:
-  constexpr FormData(Type type, std::uint32_t flags, std::uint32_t formId)
-      : type_{type}, flags_{flags}, formId_{formId}
+  constexpr FormData(Type type, std::uint32_t flags, std::uint32_t formId, std::uint16_t formVersion)
+      : type_{type}, flags_{flags}, formId_{formId}, formVersion_{formVersion}
   {}
 
   [[nodiscard]] constexpr Type type() const { return type_; }
@@ -256,12 +256,15 @@ public:
 
   [[nodiscard]] constexpr std::uint32_t formId() const { return formId_; }
 
+  [[nodiscard]] constexpr std::uint16_t formVersion() const { return formVersion_; }
+
   [[nodiscard]] constexpr std::uint8_t localModIndex() const { return formId_ >> 24; }
 
 private:
   Type type_;
   std::uint32_t flags_;
   std::uint32_t formId_;
+  std::uint16_t formVersion_;
 };
 
 }  // namespace TESFile

@@ -115,6 +115,8 @@ public:
   [[nodiscard]] bool isLightFlagged(const QString& name) const override;
   [[nodiscard]] bool isBlueprintFlagged(const QString& name) const override;
   [[nodiscard]] bool hasNoRecords(const QString& name) const override;
+  [[nodiscard]] int formVersion(const QString& name) const override;
+  [[nodiscard]] float headerVersion(const QString& name) const override;
 
   [[nodiscard]] QString author(const QString& name) const override;
   [[nodiscard]] QString description(const QString& name) const override;
