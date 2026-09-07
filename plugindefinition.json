@@ -13,7 +13,7 @@
             "MaxSupport": "",
             "MinWorking": "2.5.3",
             "MaxWorking": "",
-            "DownloadUrl": "https://github.com/hierocles/modorganizer-bsplugins/releases/download/v1.0.0/bsplugins-v1.0.0.7z",
+            "DownloadUrl": "https://github.com/hierocles/modorganizer-bsplugins/releases/download/v1.0.0b/bsplugins-v1.0.0b.7z",
             "PluginPath": [
                 "plugins/bsplugins.dll"
             ],
