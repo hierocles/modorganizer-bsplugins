@@ -3,12 +3,13 @@ name: Build Plugin
 on:
   push:
     branches: main
+    tags: ["v*"]
   pull_request:
     types: [opened, synchronize, reopened]
 
 env:
   BUILD_TYPE: RelWithDebInfo
-  SOURCE_ROOT: ./build/modorganizer_super/${{ github.event.repository.name }}
+  SOURCE_ROOT: ./build/${{ github.event.repository.name }}
 
 jobs:
   build:
@@ -23,15 +24,48 @@ jobs:
       - name: Build
         uses: ModOrganizer2/build-with-mob-action@master
         with:
-          mo2-third-parties: boost fmt libloot lz4 python zlib
-          mo2-dependencies: cmake_common uibase bsatk lootcli
+          mo2-dependencies: uibase bsatk lootcli
           qt-modules: qtpositioning qtwebchannel qtwebengine
 
       - name: Install
         run: cmake --install ${{env.SOURCE_ROOT}}/vsbuild --config ${{env.BUILD_TYPE}} --prefix ${{env.SOURCE_ROOT}}/install
 
       - name: Upload
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bsplugins
           path: ${{env.SOURCE_ROOT}}/install/bin
+
+      - name: Package release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: 7z a bsplugins-${{ github.ref_name }}.7z .
+        working-directory: ${{env.SOURCE_ROOT}}/install/bin
+
+      - name: Upload release archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: bsplugins-release-archive
+          path: ${{env.SOURCE_ROOT}}/install/bin/bsplugins-${{ github.ref_name }}.7z
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release archive
+        uses: actions/download-artifact@v4
+        with:
+          name: bsplugins-release-archive
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            "bsplugins-${{ github.ref_name }}.7z" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes

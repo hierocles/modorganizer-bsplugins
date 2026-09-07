@@ -54,7 +54,7 @@ Needs:
 ```powershell
 $env:DEPENDENCIES_DIR = "<path to your mob/modorganizer_super tree root>"
 $env:QT_ROOT = "<path to your Qt install, e.g. ...\Qt\6.11.1\msvc2022_64>"
-cmake --preset standalone
+cmake --preset vs2022-windows
 cmake --build vsbuild --config RelWithDebInfo --target bsplugins
 ```
 

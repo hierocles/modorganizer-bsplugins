@@ -13,9 +13,9 @@
       }
     },
     {
-      "name": "standalone",
+      "name": "vs2022-windows",
       "displayName": "Standalone (mob / modorganizer_super)",
-      "description": "Builds against an existing mob or modorganizer_super install tree instead of the mo2-superbuild. Needs DEPENDENCIES_DIR pointing at that tree's root (the directory containing install/ and, for cmake_common, either a modorganizer_super or a build/ subdirectory) and QT_ROOT pointing at the Qt install (e.g. .../Qt/6.11.1/msvc2022_64). Both can be set as environment variables instead of -D on the command line.",
+      "description": "Builds against an existing mob or modorganizer_super install tree instead of the mo2-superbuild. Needs DEPENDENCIES_DIR pointing at that tree's root (the directory containing install/ and, for cmake_common, either a modorganizer_super or a build/ subdirectory) and QT_ROOT pointing at the Qt install (e.g. .../Qt/6.11.1/msvc2022_64). Both can be set as environment variables instead of -D on the command line. Named vs2022-windows (rather than something bsplugins-specific) to match the preset name every other repo in this ecosystem uses, since ModOrganizer2/build-with-mob-action's CI invokes it by that exact name and overrides CMAKE_PREFIX_PATH/CMAKE_INSTALL_PREFIX itself.",
       "generator": "Visual Studio 17 2022",
       "toolset": "v143",
       "architecture": { "strategy": "set", "value": "x64" },
@@ -43,8 +43,8 @@
   ],
   "buildPresets": [
     {
-      "name": "standalone",
-      "configurePreset": "standalone"
+      "name": "vs2022-windows",
+      "configurePreset": "vs2022-windows"
     }
   ]
 }
