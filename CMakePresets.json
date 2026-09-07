@@ -1,82 +1,50 @@
 {
-  "version": 3,
+  "version": 4,
   "configurePresets": [
     {
-      "name": "windows-2022",
-      "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/vsbuild",
-      "toolset": "host=x64",
-      "architecture": "x64",
+      "name": "vcpkg",
+      "hidden": true,
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
-        "CMAKE_GENERATOR_INSTANCE": {
+        "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
+      "name": "standalone",
+      "displayName": "Standalone (mob / modorganizer_super)",
+      "description": "Builds against an existing mob or modorganizer_super install tree instead of the mo2-superbuild. Needs DEPENDENCIES_DIR pointing at that tree's root (the directory containing install/ and, for cmake_common, either a modorganizer_super or a build/ subdirectory) and QT_ROOT pointing at the Qt install (e.g. .../Qt/6.11.1/msvc2022_64). Both can be set as environment variables instead of -D on the command line.",
+      "generator": "Visual Studio 17 2022",
+      "toolset": "v143",
+      "architecture": { "strategy": "set", "value": "x64" },
+      "binaryDir": "${sourceDir}/vsbuild",
+      "inherits": ["vcpkg"],
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": {
           "type": "STRING",
-          "value": "D:/Code/tools/BuildTools,version=17.14.37012.4"
-        },
-        "CMAKE_BUILD_TYPE": {
-          "type": "STRING",
-          "value": "Release"
-        },
-        "CMAKE_CONFIGURATION_TYPES": {
-          "type": "STRING",
-          "value": "Release"
+          "value": "x64-windows-static-md"
         },
         "DEPENDENCIES_DIR": {
           "type": "PATH",
-          "value": "${sourceDir}/.."
-        },
-        "CMAKE_INSTALL_PREFIX": {
-          "type": "PATH",
-          "value": "${sourceDir}/../install"
-        },
-        "BOOST_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/vcpkg-manifest-boost/vcpkg_installed/x64-windows"
-        },
-        "BOOST_LIBRARYDIR": {
-          "type": "PATH",
-          "value": "D:/Code/tools/vcpkg-manifest-boost/vcpkg_installed/x64-windows/lib"
-        },
-        "FMT_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/vcpkg/installed/x64-windows-static-md"
-        },
-        "SPDLOG_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/spdlog-v1.10.0"
-        },
-        "LOOT_PATH": {
-          "type": "PATH",
-          "value": "D:/Code/tools/libloot-0.22.1-win64"
-        },
-        "LZ4_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/vcpkg-manifest-boost/vcpkg_installed/x64-windows"
+          "value": "$env{DEPENDENCIES_DIR}"
         },
         "QT_ROOT": {
           "type": "PATH",
-          "value": "D:/Code/tools/6.5.3/msvc2019_64"
+          "value": "$env{QT_ROOT}"
         },
-        "ZLIB_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/vcpkg/installed/x64-windows-static-md"
-        },
-        "PYTHON_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/python-3.11.5"
-        },
-        "SEVENZ_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/7zip-23.01"
-        },
-        "LIBBSARCH_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/libbsarch-0.0.9-release-x64"
-        },
-        "GTEST_ROOT": {
-          "type": "PATH",
-          "value": "D:/Code/tools/googletest"
+        "CMAKE_PREFIX_PATH": {
+          "type": "STRING",
+          "value": "$env{DEPENDENCIES_DIR}/modorganizer_super/cmake_common;$env{DEPENDENCIES_DIR}/build/cmake_common;$env{DEPENDENCIES_DIR}/cmake_common;$env{DEPENDENCIES_DIR}/install;$env{QT_ROOT}"
         }
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "standalone",
+      "configurePreset": "standalone"
     }
   ]
 }
