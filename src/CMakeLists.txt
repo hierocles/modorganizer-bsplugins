@@ -1,5 +1,18 @@
 cmake_minimum_required(VERSION 3.27)
 
+# bsplugins includes uibase headers unprefixed (e.g. <iplugin.h> rather than
+# <uibase/iplugin.h>); opt in to the compatibility include dirs uibase still
+# offers for that instead of rewriting every #include across the plugin.
+set(MO2_CMAKE_DEPRECATED_UIBASE_INCLUDE ON)
+
+find_package(mo2-cmake CONFIG REQUIRED)
+find_package(mo2-uibase CONFIG REQUIRED)
+find_package(mo2-bsatk CONFIG REQUIRED)
+find_package(mo2-lootcli-header CONFIG REQUIRED)
+find_package(Boost REQUIRED CONFIG COMPONENTS thread interprocess)
+find_package(ZLIB REQUIRED)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS WebEngineWidgets)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -22,7 +35,15 @@ target_include_directories(
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 	PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include
 )
-target_link_libraries(bsplugins PRIVATE ryml)
+target_link_libraries(
+	bsplugins
+	PRIVATE
+		ryml
+		mo2::uibase mo2::bsatk mo2::lootcli-header
+		Boost::thread Boost::interprocess
+		ZLIB::ZLIB
+		Qt6::WebEngineWidgets
+)
 
 if(MSVC)
 	target_compile_options(
@@ -36,12 +57,5 @@ if(MSVC)
 	)
 endif()
 
-mo2_configure_plugin(
-	bsplugins
-	WARNINGS OFF
-	PRIVATE_DEPENDS
-		bsatk lootcli uibase
-		boost fmt zlib
-		Qt::WebEngineWidgets
-)
-mo2_install_target(bsplugins)
+mo2_configure_plugin(bsplugins WARNINGS OFF)
+mo2_install_plugin(bsplugins)

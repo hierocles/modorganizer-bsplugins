@@ -1,11 +1,13 @@
 #include "Reader.h"
 
-#include <fmt/format.h>
 #include <zlib.h>
+
+#include <format>
 
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
+#include <system_error>
 
 namespace TESFile
 {
@@ -16,7 +18,7 @@ inline void Reader<Handler>::parse(const std::filesystem::path& path, Handler& h
   std::ifstream stream;
   stream.open(path, std::ios_base::binary | std::ios_base::in);
   if (!stream.good()) {
-    throw std::runtime_error(std::strerror(errno));
+    throw std::runtime_error(std::generic_category().message(errno));
   }
   parse(stream, handler);
 }
@@ -54,7 +56,7 @@ inline std::uint32_t Reader<Handler>::parsePluginInfo(std::istream& stream,
     stream.seekg(HeaderSize_Morrowind - sizeof(RecordHeader), std::istream::cur);
   } else {
     throw std::runtime_error(
-        fmt::format("Unrecognized plugin info type: '{}'", header.type.value));
+        std::format("Unrecognized plugin info type: '{}'", header.type.value));
   }
 
   return handleForm(stream, header, handler);
@@ -136,7 +138,7 @@ inline std::uint32_t Reader<Handler>::handleForm(std::istream& stream,
 
       if (fieldSize > dataSize) {
         throw std::runtime_error(
-            fmt::format("Subrecord exceeded record size ({}-{})", dataSize, fieldSize));
+            std::format("Subrecord exceeded record size ({}-{})", dataSize, fieldSize));
       }
 
       dataSize -= fieldSize;
@@ -169,7 +171,7 @@ inline std::uint32_t Reader<Handler>::handleGroup(std::istream& stream,
 
       if (recordSize > dataSize) {
         throw std::runtime_error(
-            fmt::format("Record exceeded group size ({}-{})", dataSize, recordSize));
+            std::format("Record exceeded group size ({}-{})", dataSize, recordSize));
       }
 
       dataSize -= recordSize;

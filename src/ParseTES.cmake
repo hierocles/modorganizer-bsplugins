@@ -10,8 +10,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(esp_json)
 
-set(PYTHON_BUILD_PATH ${PYTHON_ROOT}/PCBuild/amd64)
-set(Python_EXECUTABLE ${PYTHON_BUILD_PATH}/python.exe)
+mo2_find_python_executable(Python_EXECUTABLE)
 
 find_program(CLANG_FORMAT clang-format)
 
