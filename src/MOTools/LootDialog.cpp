@@ -5,6 +5,7 @@
 
 #include <utility.h>
 
+#include <QAbstractButton>
 #include <QCloseEvent>
 #include <QWebChannel>
 
@@ -155,9 +156,15 @@ void LootDialog::cancel()
   }
 }
 
+void LootDialog::openSortedPluginList()
+{
+  const auto& path = m_Loot.sortedPluginListPath();
+  shell::Open(path);
+}
+
 void LootDialog::openReport()
 {
-  const auto path = m_Loot.outPath();
+  const auto& path = m_Loot.reportPath();
   shell::Open(path);
 }
 
@@ -215,7 +222,11 @@ void LootDialog::createUI()
 #ifdef LOOT_STDOUT_AVAILABLE
   m_Expander.set(ui->details, ui->detailsPanel);
 #endif
+  ui->openPluginList->setEnabled(false);
   ui->openJsonReport->setEnabled(false);
+  connect(ui->openPluginList, &QPushButton::clicked, [&] {
+    openSortedPluginList();
+  });
   connect(ui->openJsonReport, &QPushButton::clicked, [&] {
     openReport();
   });
@@ -261,8 +272,9 @@ void LootDialog::onFinished()
 
     showReport();
 
+    ui->openPluginList->setEnabled(true);
     ui->openJsonReport->setEnabled(true);
-    ui->buttons->setStandardButtons(QDialogButtonBox::Close);
+    ui->buttons->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel);
 
 
 
@@ -292,7 +304,48 @@ void LootDialog::showReport()
     }
   }
 
-  m_Report.setText(lootReport.toMarkdown());
+  const auto markdown =
+      m_Loot.getSortedPluginListMarkdown() + "\n" + lootReport.toMarkdown();
+
+  m_Report.setText(markdown);
+}
+
+void LootDialog::applySortedLoadOrder()
+{
+  const auto& sortedPluginListPath = m_Loot.sortedPluginListPath();
+  if (!QFile::exists(sortedPluginListPath)) {
+    log::error("sorted plugin list '{}' does not exist, cannot apply sorted load order",
+               sortedPluginListPath);
+    return;
+  }
+
+  const auto pluginListPath = m_Organizer->profilePath() + "/loadorder.txt";
+  log::debug("moving sorted load order from '{}' to '{}'", sortedPluginListPath,
+             pluginListPath);
+
+  const auto r = shellMove(sortedPluginListPath, pluginListPath, true, this);
+  if (!r) {
+    const auto e = GetLastError();
+    log::error("failed to move sorted plugin list from '{}' to '{}': {}",
+               sortedPluginListPath, pluginListPath, formatSystemMessage(e));
+  }
+}
+
+void LootDialog::on_buttons_clicked(QAbstractButton* b)
+{
+  const auto role = ui->buttons->buttonRole(b);
+  switch (role) {
+  case QDialogButtonBox::ApplyRole:
+    ui->buttons->setEnabled(false);
+    applySortedLoadOrder();
+    close();
+    break;
+  case QDialogButtonBox::RejectRole:
+    reject();
+    break;
+  default:
+    break;
+  }
 }
 
 }  // namespace MOTools

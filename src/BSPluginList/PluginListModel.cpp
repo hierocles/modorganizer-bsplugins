@@ -183,6 +183,15 @@ QVariant PluginListModel::displayData(const QModelIndex& index) const
     const auto entry = m_Plugins->findEntryByName(plugin->name().toStdString());
     return entry ? entry->recordCount() : QVariant();
   }
+  case COL_FORMVERSION:
+    return plugin->formVersion() != 0 ? QString::number(plugin->formVersion())
+                                       : QVariant();
+  case COL_HEADERVERSION:
+    return QString::number(plugin->headerVersion());
+  case COL_AUTHOR:
+    return plugin->author();
+  case COL_DESCRIPTION:
+    return plugin->description();
   default:
     return QVariant();
   }
@@ -231,9 +240,13 @@ QVariant PluginListModel::foregroundData(const QModelIndex& index) const
   return QVariant();
 }
 
-QVariant
-PluginListModel::backgroundData([[maybe_unused]] const QModelIndex& index) const
+QVariant PluginListModel::backgroundData(const QModelIndex& index) const
 {
+  const auto plugin = m_Plugins->getPlugin(index.row());
+  if (plugin && plugin->isMasterOfSelectedPlugin()) {
+    return Settings::instance()->masterColor();
+  }
+
   return QVariant();
 }
 
@@ -375,6 +388,15 @@ QVariant PluginListModel::tooltipData(const QModelIndex& index) const
                  tr("This plugin can't be disabled (enforced by the game).") +
                  "</i></b>";
     }
+
+    if (plugin->formVersion() != 0) {
+      // Oblivion-style plugin headers don't have a form version.
+      toolTip +=
+          "<br><b>" + tr("Form Version") + "</b>: " + QString::number(plugin->formVersion());
+    }
+
+    toolTip += "<br><b>" + tr("Header Version") +
+               "</b>: " + QString::number(plugin->headerVersion());
 
     if (!plugin->author().isEmpty()) {
       toolTip += "<br><b>" + tr("Author") + "</b>: " + truncateString(plugin->author());
@@ -650,6 +672,14 @@ QVariant PluginListModel::headerData(int section, Qt::Orientation orientation,
         return tr("Notes");
       case COL_RECORDS:
         return tr("Records");
+      case COL_FORMVERSION:
+        return tr("Form Version");
+      case COL_HEADERVERSION:
+        return tr("Header Version");
+      case COL_AUTHOR:
+        return tr("Author");
+      case COL_DESCRIPTION:
+        return tr("Description");
       default:
         return tr("unknown");
       }

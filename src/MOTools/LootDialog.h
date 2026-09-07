@@ -12,6 +12,8 @@
 #include <QObject>
 #include <QWebEnginePage>
 
+class QAbstractButton;
+
 namespace Ui
 {
 class LootDialog;
@@ -73,6 +75,7 @@ public:
   void addOutput(const QString& s);
   bool result() const;
   void cancel();
+  void openSortedPluginList();
   void openReport();
 
   int exec() override;
@@ -100,6 +103,10 @@ private:
   void onFinished();
   void log(MOBase::log::Levels lv, const QString& s);
   void showReport();
+  void applySortedLoadOrder();
+
+private slots:
+  void on_buttons_clicked(QAbstractButton* b);
 };
 
 }  // namespace MOTools

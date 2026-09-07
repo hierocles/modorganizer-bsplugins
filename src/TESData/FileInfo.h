@@ -64,6 +64,8 @@ public:
   {
     QString author;
     QString description;
+    int formVersion    = 0;
+    float headerVersion = 0.0F;
 
     bool isMasterFlagged;
     bool isLightFlagged;
@@ -124,6 +126,10 @@ public:
   void setAuthor(const QString& author) { m_Metadata.author = author; }
   [[nodiscard]] const QString& description() const { return m_Metadata.description; }
   void setDescription(const QString& text) { m_Metadata.description = text; }
+  [[nodiscard]] int formVersion() const { return m_Metadata.formVersion; }
+  void setFormVersion(int version) { m_Metadata.formVersion = version; }
+  [[nodiscard]] float headerVersion() const { return m_Metadata.headerVersion; }
+  void setHeaderVersion(float version) { m_Metadata.headerVersion = version; }
   [[nodiscard]] bool isMasterFlagged() const { return m_Metadata.isMasterFlagged; }
   void setMasterFlagged(bool value) { m_Metadata.isMasterFlagged = value; }
   [[nodiscard]] bool isLightFlagged() const { return m_Metadata.isLightFlagged; }
@@ -169,6 +175,12 @@ public:
   [[nodiscard]] bool lockedOrder() const { return m_State.lockedOrder; }
   void setLockedOrder(bool locked) { m_State.lockedOrder = locked; }
 
+  [[nodiscard]] bool isMasterOfSelectedPlugin() const
+  {
+    return m_IsMasterOfSelectedPlugin;
+  }
+  void setMasterOfSelectedPlugin(bool value) { m_IsMasterOfSelectedPlugin = value; }
+
   [[nodiscard]] EConflictFlag conflictState() const
   {
     return m_Conflicts.value().m_CurrentConflictState;
@@ -209,6 +221,7 @@ private:
   FileSystemData m_FileSystemData;
   Metadata m_Metadata;
   State m_State;
+  bool m_IsMasterOfSelectedPlugin = false;
   mutable MOBase::MemoizedLocked<Conflicts> m_Conflicts;
 };
 

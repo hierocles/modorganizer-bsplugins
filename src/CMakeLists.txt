@@ -59,3 +59,12 @@ endif()
 
 mo2_configure_plugin(bsplugins WARNINGS OFF)
 mo2_install_plugin(bsplugins)
+# ryml is fetched as a shared library (ryml.dll), so bsplugins.dll has a runtime
+# dependency nothing else in the tree installs. A plugin DLL is loaded well after
+# process startup via QPluginLoader, which does not add the loading DLL's own
+# directory to the search path (that's only true of the exe's own imports) -- so a
+# copy sitting next to bsplugins.dll in plugins/ would not be found. bin/dlls IS on
+# the search path: MOApplication::addDllsToPath() prepends it to PATH at startup,
+# which is how Qt's own DLLs resolve despite living outside bin/. Same fix as the
+# root CMakeLists.txt's 7zip.dll install.
+install(FILES "$<TARGET_FILE:ryml>" DESTINATION ${MO2_INSTALL_BIN}/dlls)

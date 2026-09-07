@@ -42,11 +42,17 @@ public:
     COL_MODINDEX,
     COL_NOTES,
     COL_RECORDS,
+    COL_FORMVERSION,
+    COL_HEADERVERSION,
+    COL_AUTHOR,
+    COL_DESCRIPTION,
 
     COL_COUNT
   };
 
   explicit PluginListModel(TESData::PluginList* plugins);
+
+  [[nodiscard]] TESData::PluginList* plugins() const { return m_Plugins; }
 
   QModelIndex index(int row, int column,
                     const QModelIndex& parent = QModelIndex()) const override;

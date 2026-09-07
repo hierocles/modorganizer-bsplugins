@@ -65,6 +65,7 @@ bool FileConflictParser::Form(TESFile::FormData form)
           m_OverlaySupported ? (form.flags() & TESFile::RecordFlags::LightNew)
           : m_LightSupported ? (form.flags() & TESFile::RecordFlags::LightOld)
                              : false);
+      m_Plugin->setFormVersion(form.version());
       return true;
     } else {
       throw std::runtime_error("Unsupported header record");
@@ -161,6 +162,7 @@ void FileConflictParser::MainRecordData(std::istream& stream)
     }
 
     m_Plugin->setHasNoRecords(header.numRecords == 0);
+    m_Plugin->setHeaderVersion(header.version);
   } break;
 
   case "MAST"_ts: {

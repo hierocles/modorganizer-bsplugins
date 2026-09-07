@@ -956,14 +956,14 @@ bool PluginList::hasNoRecords(const QString& name) const
 
 int PluginList::formVersion(const QString& name) const
 {
-  Q_UNUSED(name);
-  return -1;
+  const auto plugin = findPlugin(name);
+  return plugin ? plugin->formVersion() : -1;
 }
 
 float PluginList::headerVersion(const QString& name) const
 {
-  Q_UNUSED(name);
-  return -1.0F;
+  const auto plugin = findPlugin(name);
+  return plugin ? plugin->headerVersion() : -1.0F;
 }
 
 QString PluginList::author(const QString& name) const
@@ -1660,6 +1660,29 @@ void PluginList::lockPlugin(int id, bool locked)
   if (const auto lockedFile = lockedOrderPath(); !lockedFile.isEmpty()) {
     writeLockedOrder(lockedFile);
   }
+}
+
+void PluginList::highlightMasters(const std::vector<int>& selectedPluginIds)
+{
+  for (const auto& plugin : m_Plugins) {
+    plugin->setMasterOfSelectedPlugin(false);
+  }
+
+  for (const auto id : selectedPluginIds) {
+    if (id < 0 || id >= static_cast<int>(m_Plugins.size())) {
+      continue;
+    }
+
+    for (const auto& master : m_Plugins[id]->masters()) {
+      if (const auto plugin = findPlugin(master)) {
+        plugin->setMasterOfSelectedPlugin(true);
+      }
+    }
+  }
+
+  // Deliberately no dataChanged() here: emitting it re-enters selectionChanged
+  // through the filter proxy when a highlighted row is currently filtered out,
+  // which can crash. The view repaints itself after calling this instead.
 }
 
 void PluginList::queuePluginStateChange(const QString& pluginName, PluginStates state)

@@ -86,8 +86,10 @@ inline std::uint32_t Reader<Handler>::handleForm(std::istream& stream,
 {
   std::uint32_t dataSize = header.dataSize;
   const bool compressed  = header.formData.flags & RecordFlags::Compressed;
-  if (handler.Form(
-          FormData(header.type, header.formData.flags, header.formData.formId))) {
+  const std::uint16_t version =
+      chunkFormat_ == TESFormat::Standard ? header.version : 0;
+  if (handler.Form(FormData(header.type, header.formData.flags, header.formData.formId,
+                            version))) {
 
     std::string data;
     data.resize(dataSize);

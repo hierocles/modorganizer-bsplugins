@@ -90,6 +90,8 @@ public:
 
   void lockPlugin(int id, bool locked);
 
+  void highlightMasters(const std::vector<int>& selectedPluginIds);
+
   [[nodiscard]] QStringList knownGroups() const;
 
   [[nodiscard]] QStringList loadOrder() const;

@@ -243,8 +243,9 @@ private:
 class FormData final
 {
 public:
-  constexpr FormData(Type type, std::uint32_t flags, std::uint32_t formId)
-      : type_{type}, flags_{flags}, formId_{formId}
+  constexpr FormData(Type type, std::uint32_t flags, std::uint32_t formId,
+                     std::uint16_t version = 0)
+      : type_{type}, flags_{flags}, formId_{formId}, version_{version}
   {}
 
   [[nodiscard]] constexpr Type type() const { return type_; }
@@ -255,10 +256,16 @@ public:
 
   [[nodiscard]] constexpr std::uint8_t localModIndex() const { return formId_ >> 24; }
 
+  // Record header revision. Only meaningful for the file's TES4 record, where it
+  // indicates the plugin's form version (43/44/...). Zero for formats whose header
+  // doesn't carry it (Oblivion/Morrowind), same sentinel MO2 core uses.
+  [[nodiscard]] constexpr std::uint16_t version() const { return version_; }
+
 private:
   Type type_;
   std::uint32_t flags_;
   std::uint32_t formId_;
+  std::uint16_t version_;
 };
 
 }  // namespace TESFile

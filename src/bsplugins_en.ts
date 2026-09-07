@@ -329,158 +329,172 @@
 <context>
     <name>BSPluginList::PluginListModel</name>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="367"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="380"/>
         <source>Origin</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="371"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="384"/>
         <source>This plugin can&apos;t be disabled or moved (enforced by the game).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="375"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="388"/>
         <source>This plugin can&apos;t be disabled (enforced by the game).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="380"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="395"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="676"/>
+        <source>Form Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="BSPluginList/PluginListModel.cpp" line="398"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="678"/>
+        <source>Header Version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="BSPluginList/PluginListModel.cpp" line="402"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="680"/>
         <source>Author</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="384"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="406"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="682"/>
         <source>Description</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="389"/>
-        <location filename="BSPluginList/PluginListModel.cpp" line="466"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="411"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="488"/>
         <source>Missing Masters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="403"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="425"/>
         <source>Enabled Masters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="414"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="436"/>
         <source>Loads Archives</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="418"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="440"/>
         <source>Loads INI settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="424"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="446"/>
         <source>This is a dummy plugin. It contains no records and is typically used to load a paired archive file.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="437"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="459"/>
         <source>Totally overwritten records (redundant)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="439"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="461"/>
         <source>Overrides &amp; has overridden records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="441"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="463"/>
         <source>Overrides records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="443"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="465"/>
         <source>Has overridden records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="451"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="473"/>
         <source>Overwrites &amp; has overwritten archive files</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="453"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="475"/>
         <source>Overwrites another archive file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="455"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="477"/>
         <source>Overwritten by another archive file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="475"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="497"/>
         <source>There is an ini file connected to this plugin. Its settings will be added to your game settings, overwriting in case of conflicts.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="482"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="504"/>
         <source>There are Archives connected to this plugin. Their assets will be added to your game, overwriting in case of conflicts following the plugin order. Loose files will always overwrite assets from Archives.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="490"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="512"/>
         <source>This file is flagged as an ESM. It will load before any non-ESM files in the load order.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="496"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="518"/>
         <source>This file is flagged as an ESL. It will adhere to its position in the load order but the records will be loaded in ESL space.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="502"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="524"/>
         <source>This plugin is flagged as an overlay plugin. It contains only modified records and will overlay those changes onto the existing records in memory. It takes no memory space.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="509"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="531"/>
         <source>This game does not currently permit custom plugin loading. There may be manual workarounds.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="640"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="662"/>
         <source>Name</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="642"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="664"/>
         <source>Conflicts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="644"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="666"/>
         <source>Flags</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="646"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="668"/>
         <source>Priority</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="648"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="670"/>
         <source>Mod Index</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="650"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="672"/>
         <source>Notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="652"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="674"/>
         <source>Records</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="654"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="684"/>
         <source>unknown</source>
         <translation type="unfinished"></translation>
     </message>
@@ -723,6 +737,11 @@
     </message>
     <message>
         <location filename="MOTools/lootdialog.ui" line="118"/>
+        <source>Open plugin list</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="MOTools/lootdialog.ui" line="125"/>
         <source>Open JSON report</source>
         <translation type="unfinished"></translation>
     </message>
@@ -730,52 +749,62 @@
 <context>
     <name>MOTools::Loot</name>
     <message>
-        <location filename="MOTools/Loot.cpp" line="238"/>
+        <location filename="MOTools/Loot.cpp" line="239"/>
         <source>Loot failed to run</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="243"/>
+        <location filename="MOTools/Loot.cpp" line="244"/>
         <source>No errors were reported. The log below might have more information.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="245"/>
+        <location filename="MOTools/Loot.cpp" line="246"/>
         <source>Get more information by using the LOOT application to sort your load order.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="301"/>
+        <location filename="MOTools/Loot.cpp" line="302"/>
         <source>Errors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="313"/>
+        <location filename="MOTools/Loot.cpp" line="314"/>
         <source>Warnings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="506"/>
+        <location filename="MOTools/Loot.cpp" line="511"/>
         <source>failed to start loot</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="620"/>
+        <location filename="MOTools/Loot.cpp" line="630"/>
         <source>Loot failed. Exit code was: 0x%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="MOTools/Loot.cpp" line="753"/>
+        <source>Sorted plugins</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="MOTools/Loot.cpp" line="754"/>
+        <source>Show</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
     <name>MOTools::LootDialog</name>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="150"/>
+        <location filename="MOTools/LootDialog.cpp" line="151"/>
         <source>Stopping LOOT...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="225"/>
+        <location filename="MOTools/LootDialog.cpp" line="236"/>
         <source>Running LOOT...</source>
         <translation type="unfinished"></translation>
     </message>
@@ -987,19 +1016,19 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="300"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="313"/>
         <source>Incompatible with %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="312"/>
-        <location filename="MOTools/Loot.cpp" line="422"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="325"/>
+        <location filename="MOTools/Loot.cpp" line="423"/>
         <source>Warning</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="BSPluginList/PluginListModel.cpp" line="316"/>
-        <location filename="MOTools/Loot.cpp" line="417"/>
+        <location filename="BSPluginList/PluginListModel.cpp" line="329"/>
+        <location filename="MOTools/Loot.cpp" line="418"/>
         <source>Error</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1019,82 +1048,82 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="265"/>
+        <location filename="MOTools/Loot.cpp" line="266"/>
         <source>General messages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="277"/>
+        <location filename="MOTools/Loot.cpp" line="278"/>
         <source>Plugins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="288"/>
+        <location filename="MOTools/Loot.cpp" line="289"/>
         <source>No messages.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="336"/>
+        <location filename="MOTools/Loot.cpp" line="337"/>
         <source>Incompatibilities</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="351"/>
+        <location filename="MOTools/Loot.cpp" line="352"/>
         <source>Missing masters</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="383"/>
+        <location filename="MOTools/Loot.cpp" line="384"/>
         <source>Verified clean by %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="403"/>
+        <location filename="MOTools/Loot.cpp" line="404"/>
         <source>%1 found %2 ITM record(s), %3 deleted reference(s) and %4 deleted navmesh(es).</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/Loot.cpp" line="926"/>
+        <location filename="MOTools/Loot.cpp" line="985"/>
         <source>failed to run loot: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="21"/>
+        <location filename="MOTools/LootDialog.cpp" line="22"/>
         <source>Checking masterlist existence</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="22"/>
+        <location filename="MOTools/LootDialog.cpp" line="23"/>
         <source>Updating masterlist</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="23"/>
+        <location filename="MOTools/LootDialog.cpp" line="24"/>
         <source>Loading lists</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="24"/>
+        <location filename="MOTools/LootDialog.cpp" line="25"/>
         <source>Reading plugins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="25"/>
+        <location filename="MOTools/LootDialog.cpp" line="26"/>
         <source>Sorting plugins</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="26"/>
+        <location filename="MOTools/LootDialog.cpp" line="27"/>
         <source>Writing loadorder.txt</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="27"/>
+        <location filename="MOTools/LootDialog.cpp" line="28"/>
         <source>Parsing loot messages</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="MOTools/LootDialog.cpp" line="28"/>
+        <location filename="MOTools/LootDialog.cpp" line="29"/>
         <source>Done</source>
         <translation type="unfinished"></translation>
     </message>

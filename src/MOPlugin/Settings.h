@@ -47,6 +47,7 @@ public:
   [[nodiscard]] QColor overwrittenArchiveFilesColor() const;
   [[nodiscard]] QColor overwritingArchiveFilesColor() const;
   [[nodiscard]] QColor containedColor() const;
+  [[nodiscard]] QColor masterColor() const;
   [[nodiscard]] bool offlineMode() const;
   [[nodiscard]] lootcli::LogLevels lootLogLevel() const;
 

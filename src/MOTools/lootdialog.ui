@@ -113,6 +113,13 @@
           <number>0</number>
          </property>
          <item>
+          <widget class="QPushButton" name="openPluginList">
+           <property name="text">
+            <string>Open plugin list</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="openJsonReport">
            <property name="text">
             <string>Open JSON report</string>

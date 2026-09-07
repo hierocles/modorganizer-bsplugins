@@ -17,6 +17,7 @@
 #include <QSortFilterProxyModel>
 
 #include <stdexcept>
+#include <vector>
 
 namespace BSPluginList
 {
@@ -42,6 +43,14 @@ void PluginListView::setup()
   header()->resizeSection(PluginListModel::COL_MODINDEX, 79);
   header()->resizeSection(PluginListModel::COL_RECORDS, 70);
   header()->hideSection(PluginListModel::COL_RECORDS);
+  header()->resizeSection(PluginListModel::COL_FORMVERSION, 90);
+  header()->hideSection(PluginListModel::COL_FORMVERSION);
+  header()->resizeSection(PluginListModel::COL_HEADERVERSION, 100);
+  header()->hideSection(PluginListModel::COL_HEADERVERSION);
+  header()->resizeSection(PluginListModel::COL_AUTHOR, 120);
+  header()->hideSection(PluginListModel::COL_AUTHOR);
+  header()->resizeSection(PluginListModel::COL_DESCRIPTION, 200);
+  header()->hideSection(PluginListModel::COL_DESCRIPTION);
   header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
   connect(this, &QTreeView::collapsed, this, &PluginListView::updateOverwriteMarkers);
@@ -215,6 +224,18 @@ void PluginListView::clearOverwriteMarkers()
 void PluginListView::updateOverwriteMarkers()
 {
   QModelIndexList indexes = selectionModel()->selectedRows();
+
+  std::vector<int> selectedPluginIds;
+  selectedPluginIds.reserve(static_cast<std::size_t>(indexes.size()));
+  for (const auto& idx : indexes) {
+    bool ok             = false;
+    const auto pluginId = idx.data(PluginListModel::IndexRole).toInt(&ok);
+    if (ok) {
+      selectedPluginIds.push_back(pluginId);
+    }
+  }
+  m_PluginModel->plugins()->highlightMasters(selectedPluginIds);
+
   for (const auto& idx : selectionModel()->selectedRows()) {
     if (model()->hasChildren(idx) && !isExpanded(idx)) {
       for (int i = 0, count = model()->rowCount(idx); i < count; ++i) {
@@ -295,7 +316,14 @@ void PluginListView::paintEvent(QPaintEvent* event)
 {
   if (m_FirstPaint) {
     header()->setSectionResizeMode(0, QHeaderView::Interactive);
-    header()->setStretchLastSection(true);
+    // Not stretch-last-section: with optional columns like Form Version/Header
+    // Version/Author/Description available to show, the last visible one should be
+    // free to keep its own width and let the header grow past the viewport --
+    // stretching it to fill would instead squeeze everything to always fit,
+    // leaving no horizontal scrollbar to reach columns off the right edge.
+    header()->setStretchLastSection(false);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_FirstPaint = false;
   }
 

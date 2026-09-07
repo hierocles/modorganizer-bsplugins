@@ -79,6 +79,12 @@ QColor Settings::containedColor() const
       .value<QColor>();
 }
 
+QColor Settings::masterColor() const
+{
+  return MOSettings.value("Settings/masterColor", QColor(255, 255, 0, 64))
+      .value<QColor>();
+}
+
 bool Settings::offlineMode() const
 {
   return MOSettings.value("Settings/offline_mode", false).value<bool>();
