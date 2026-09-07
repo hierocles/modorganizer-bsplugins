@@ -3,7 +3,7 @@
     "Author": "Parapets",
     "Description": "Manages plugin load order for Bethesda Game Studios game engines",
     "DocsUrl": "",
-    "GithubUrl": "https://github.com/Exit-9B/modorganizer-bsplugins",
+    "GithubUrl": "https://github.com/hierocles/modorganizer-bsplugins",
     "NexusUrl": "https://www.nexusmods.com/skyrimspecialedition/mods/111236",
     "Versions": [
         {
@@ -22,6 +22,27 @@
             ],
             "DataPath": [],
             "ReleaseNotes": []
+        },
+        {
+            "Version": "1.0.0.0b",
+            "Released": "2026-09-07",
+            "MinSupport": "2.5.3",
+            "MaxSupport": "",
+            "MinWorking": "2.5.3",
+            "MaxWorking": "",
+            "DownloadUrl": "",
+            "PluginPath": [
+                "plugins/bsplugins.dll"
+            ],
+            "LocalePath": [
+                "translations/bsplugins_en.qm"
+            ],
+            "DataPath": [],
+            "ReleaseNotes": [
+                "Not backward compatible with MO2 2.5.2 and earlier: now calls QSortFilterProxyModel::begin/endFilterChange(), which only exists from Qt 6.11+ (no public MO2 release ships this yet -- targets mo2-superbuild-built installs and any custom build using Qt 6.11+).",
+                "Brought the plugin panel up to parity with upstream MO2's plugin list panel: Form Version/Header Version/Author/Description columns and tooltip lines, highlighting the masters of a selected plugin, and gating LOOT's sorted load order behind an explicit Apply in the LOOT dialog.",
+                "Restored standalone (mob / modorganizer_super) buildability alongside the mo2-superbuild."
+            ]
         }
     ]
 }
