@@ -10,6 +10,8 @@ A fork of [Exit-9B/modorganizer-bsplugins](https://github.com/Exit-9B/modorganiz
 plugin-load-order panel for Mod Organizer 2, with [Alaxouche](https://github.com/Alaxouche)'s
 stability and group-management work, updated to build and run against current MO2 2.5.3.
 
+Currently built for Skyrim Special Edition usage. Upstream bugs or improvements with other Bethesda games are not included, but will be merged when upstream is updated.
+
 ## New features
 
 Alaxouche's extensions:
